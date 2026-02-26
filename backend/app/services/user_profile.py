@@ -129,7 +129,7 @@ Conversation:
             messages=[{"role": "user", "content": prompt}],
             api_key=api_key,
             temperature=0.0,
-            max_tokens=1500,
+            max_completion_tokens=1500,
         )
         raw = response.choices[0].message.content
         start = raw.find("{")

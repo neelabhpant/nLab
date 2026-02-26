@@ -1,12 +1,13 @@
 import { useEffect, useRef, useCallback, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { Trash2, ArrowUp, User, BriefcaseBusiness, FileText, Target, Sparkles } from 'lucide-react'
+import { Trash2, ArrowUp, User, BriefcaseBusiness, FileText, Target, Sparkles, PanelLeft, MessageSquare, Lightbulb } from 'lucide-react'
 import Markdown from 'react-markdown'
 import { useAdvisorStore, type AdvisorMessage } from '@/spaces/finance/stores/advisor-store'
 import { AdvisorSidebar } from '@/spaces/finance/components/advisor-sidebar'
 import { AdvisorInsights } from '@/spaces/finance/components/advisor-insights'
 import { CrewThinking } from '@/shared/components/crew-thinking'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 
 const markdownComponents = {
   h1: ({ children }: { children?: ReactNode }) => (
@@ -212,7 +213,7 @@ function AdvisorEmpty({ onSuggestionClick }: { onSuggestionClick: (s: string) =>
         </p>
       </motion.div>
 
-      <div className="grid grid-cols-3 gap-2.5 mb-8 max-w-[480px] w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-8 max-w-[480px] w-full">
         {[
           { icon: FileText, name: 'Documents', desc: 'Upload statements and tax returns', color: '#00D4FF' },
           { icon: BriefcaseBusiness, name: 'Analysis', desc: 'AI extracts your financial data', color: '#00E599' },
@@ -261,9 +262,13 @@ function AdvisorEmpty({ onSuggestionClick }: { onSuggestionClick: (s: string) =>
   )
 }
 
+type MobilePanel = 'profile' | 'chat' | 'insights'
+
 export function AdvisorFinancial() {
+  const { onMobileMenuToggle } = useLayoutContext()
   const { messages, streaming, profile, sendMessage, clearChat, fetchProfile, fetchDocuments } = useAdvisorStore()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>('chat')
 
   useEffect(() => {
     fetchProfile()
@@ -285,7 +290,7 @@ export function AdvisorFinancial() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="Financial Advisor" subtitle="AI-powered financial guidance">
+      <TopHeader title="Financial Advisor" subtitle="AI-powered financial guidance" onMenuToggle={onMobileMenuToggle}>
         {messages.length > 0 && (
           <motion.button
             initial={{ opacity: 0, scale: 0.9 }}
@@ -300,17 +305,38 @@ export function AdvisorFinancial() {
         )}
       </TopHeader>
 
+      <div className="flex md:hidden border-b border-border">
+        {([
+          { id: 'profile' as MobilePanel, label: 'Profile', icon: PanelLeft },
+          { id: 'chat' as MobilePanel, label: 'Chat', icon: MessageSquare },
+          { id: 'insights' as MobilePanel, label: 'Insights', icon: Lightbulb },
+        ]).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setMobilePanel(tab.id)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-display font-semibold transition-colors ${
+              mobilePanel === tab.id
+                ? 'text-cyan border-b-2 border-cyan'
+                : 'text-slate-400'
+            }`}
+          >
+            <tab.icon className="w-3.5 h-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 flex min-h-0">
-        <div className="w-72 flex-shrink-0 border-r border-border overflow-y-auto">
+        <div className={`w-full md:w-72 flex-shrink-0 border-r border-border overflow-y-auto ${mobilePanel === 'profile' ? 'block' : 'hidden'} md:block`}>
           <AdvisorSidebar />
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`flex-1 flex-col min-w-0 ${mobilePanel === 'chat' ? 'flex' : 'hidden'} md:flex`}>
           <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
             {messages.length === 0 ? (
               <AdvisorEmpty onSuggestionClick={handleSend} />
             ) : (
-              <div className="max-w-3xl mx-auto px-6 py-4 space-y-5">
+              <div className="max-w-3xl mx-auto px-4 md:px-6 py-4 space-y-5">
                 {messages.map((msg, i) => (
                   <AdvisorMessageBubble
                     key={msg.id}
@@ -328,7 +354,7 @@ export function AdvisorFinancial() {
           </div>
         </div>
 
-        <div className="w-64 flex-shrink-0 border-l border-border overflow-y-auto">
+        <div className={`w-full md:w-64 flex-shrink-0 border-l border-border overflow-y-auto ${mobilePanel === 'insights' ? 'block' : 'hidden'} md:block`}>
           <AdvisorInsights profile={profile} onSuggestionClick={handleSend} />
         </div>
       </div>

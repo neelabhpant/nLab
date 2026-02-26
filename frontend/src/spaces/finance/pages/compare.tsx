@@ -11,6 +11,7 @@ import { CorrelationBadge } from '@/spaces/finance/components/correlation-badge'
 import { CompareSkeleton } from '@/spaces/finance/components/compare-skeleton'
 import { ErrorCard } from '@/shared/components/error-card'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 import { SentimentHeatmap } from '@/spaces/finance/components/sentiment-heatmap'
 import { SentimentTrendChart } from '@/spaces/finance/components/sentiment-trend-chart'
 import { SentimentSummary } from '@/spaces/finance/components/sentiment-summary'
@@ -23,6 +24,7 @@ const VALID_COINS = new Set(AVAILABLE_COINS.map((c) => c.id))
 const SENTIMENT_DAYS_OPTIONS = [7, 14, 30]
 
 export function Compare() {
+  const { onMobileMenuToggle } = useLayoutContext()
   const [section, setSection] = useState<Section>('sentiment')
   const [sentimentCoins, setSentimentCoins] = useState<string[]>(['bitcoin', 'ripple'])
   const [sentimentDays, setSentimentDays] = useState(14)
@@ -110,8 +112,8 @@ export function Compare() {
   if (loading && !data && section === 'correlation') {
     return (
       <div className="flex flex-col h-full">
-        <TopHeader title="Analytics" subtitle="Market Sentiment & Price Correlation" />
-        <div className="flex-1 p-6 lg:p-8">
+        <TopHeader title="Analytics" subtitle="Market Sentiment & Price Correlation" onMenuToggle={onMobileMenuToggle} />
+        <div className="flex-1 p-3 md:p-6 lg:p-8">
           <CompareSkeleton />
         </div>
       </div>
@@ -120,8 +122,8 @@ export function Compare() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="Analytics" subtitle="Market Sentiment & Price Correlation" />
-      <div className="flex-1 overflow-auto p-6 lg:p-8">
+      <TopHeader title="Analytics" subtitle="Market Sentiment & Price Correlation" onMenuToggle={onMobileMenuToggle} />
+      <div className="flex-1 overflow-auto p-3 md:p-6 lg:p-8">
 
       <div className="flex items-center gap-2 mb-6">
         <div className="flex items-center gap-1 rounded-lg bg-surface-1 border border-border p-0.5">
@@ -204,7 +206,7 @@ export function Compare() {
 
         <div className="relative p-4 h-full">
           {data && data.series.length > 0 && (
-            <div className="h-[460px]">
+            <div className="h-[280px] md:h-[460px]">
               <OverlayChart
                 series={data.series}
                 method={data.method}

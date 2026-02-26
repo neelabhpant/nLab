@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 import { FunctionChart } from '@/spaces/labs/components/function-music/function-chart'
 import { FunctionControls } from '@/spaces/labs/components/function-music/function-controls'
 import { FunctionInfo } from '@/spaces/labs/components/function-music/function-info'
@@ -10,6 +11,7 @@ import { useFunctionMusicStore } from '@/spaces/labs/stores/function-music-store
 
 export function FunctionToMusic() {
   const navigate = useNavigate()
+  const { onMobileMenuToggle } = useLayoutContext()
   const { isPlotted, plot } = useFunctionMusicStore()
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export function FunctionToMusic() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="Function to Music" subtitle="Labs project">
+      <TopHeader title="Function to Music" subtitle="Labs project" onMenuToggle={onMobileMenuToggle}>
         <button
           onClick={() => navigate('/labs')}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-display font-medium text-muted-foreground hover:text-foreground hover:bg-surface-1 transition-all duration-200 cursor-pointer"
@@ -35,14 +37,14 @@ export function FunctionToMusic() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="flex gap-6 h-full"
+          className="flex flex-col md:flex-row gap-6 md:h-full"
         >
-          <div className="w-[65%] min-w-0 space-y-4">
+          <div className="w-full md:w-[65%] min-w-0 space-y-4">
             <FunctionChart />
             <FunctionControls />
           </div>
 
-          <div className="w-[35%] min-w-0">
+          <div className="w-full md:w-[35%] min-w-0">
             <FunctionInfo />
           </div>
         </motion.div>

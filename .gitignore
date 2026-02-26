@@ -11,6 +11,8 @@ frontend/dist/
 
 # Secrets & env
 backend/.env
+frontend/.env
+google.txt
 
 # User data (contains API keys in settings)
 backend/data/

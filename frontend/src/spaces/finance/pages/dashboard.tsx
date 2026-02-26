@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import { usePriceStore } from '@/spaces/finance/stores/price-store'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 import { AnimatedNumber } from '@/shared/components/animated-number'
 import { Sparkline } from '@/spaces/finance/components/sparkline'
 import { ErrorCard } from '@/shared/components/error-card'
@@ -74,6 +75,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 
 export function Dashboard() {
   const navigate = useNavigate()
+  const { onMobileMenuToggle } = useLayoutContext()
   const { prices, historical, loading, error, fetchPrices, fetchHistorical } = usePriceStore()
   const [chartCoin, setChartCoin] = useState('bitcoin')
   const [chartDays, setChartDays] = useState(7)
@@ -122,9 +124,9 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="Dashboard" subtitle="Portfolio overview and market data" />
+      <TopHeader title="Dashboard" subtitle="Portfolio overview and market data" onMenuToggle={onMobileMenuToggle} />
 
-      <div className="flex-1 overflow-auto p-6 lg:p-8">
+      <div className="flex-1 overflow-auto p-3 md:p-6 lg:p-8">
         {error && !loading && !prices.length && (
           <div className="mb-6">
             <ErrorCard message={error} onRetry={() => { fetchPrices(ALL_MARKET_COINS); fetchAllHistorical() }} />
@@ -140,7 +142,7 @@ export function Dashboard() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.05 }}
-              className="rounded-xl border border-border bg-surface-0 p-5 shadow-md overflow-hidden relative"
+              className="rounded-xl border border-border bg-surface-0 p-3 md:p-5 shadow-md overflow-hidden relative"
             >
               <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'linear-gradient(90deg, #F7931A, #F7931A80)' }} />
               <div className="flex items-center justify-between mb-2">
@@ -175,7 +177,7 @@ export function Dashboard() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="rounded-xl border border-border bg-surface-0 p-5 shadow-md overflow-hidden relative"
+              className="rounded-xl border border-border bg-surface-0 p-3 md:p-5 shadow-md overflow-hidden relative"
             >
               <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: 'linear-gradient(90deg, #0EA5E9, #0EA5E980)' }} />
               <div className="flex items-center justify-between mb-2">
@@ -215,14 +217,14 @@ export function Dashboard() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="rounded-xl border border-border bg-surface-0 p-6 shadow-sm mb-6"
+          className="rounded-xl border border-border bg-surface-0 p-3 md:p-6 shadow-sm mb-6"
         >
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-display font-semibold text-slate-900">{activeCoinMeta.symbol} Price Performance</h2>
               <p className="text-xs text-slate-500 font-body">Last {chartDays === 7 ? '7 days' : chartDays === 30 ? '30 days' : chartDays === 180 ? '6 months' : '1 year'}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 flex-wrap">
               <div className="flex items-center gap-1 rounded-lg bg-surface-1 border border-border p-0.5">
                 {CHART_COINS.map((coin) => (
                   <button
@@ -255,7 +257,7 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="h-[240px]">
+          <div className="h-[180px] md:h-[240px]">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 4, left: -12 }}>

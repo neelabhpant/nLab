@@ -6,8 +6,10 @@ import { ChatMessageBubble } from '@/spaces/finance/components/chat-message'
 import { ChatInput } from '@/spaces/finance/components/chat-input'
 import { ChatEmpty } from '@/spaces/finance/components/chat-empty'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 
 export function Chat() {
+  const { onMobileMenuToggle } = useLayoutContext()
   const { messages, streaming, sendMessage, clearChat } = useChatStore()
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -26,7 +28,7 @@ export function Chat() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="AI Assistant" subtitle="Multi-agent financial intelligence">
+      <TopHeader title="AI Assistant" subtitle="Multi-agent financial intelligence" onMenuToggle={onMobileMenuToggle}>
         {messages.length > 0 && (
           <motion.button
             initial={{ opacity: 0, scale: 0.9 }}
@@ -45,7 +47,7 @@ export function Chat() {
         {messages.length === 0 ? (
           <ChatEmpty onSuggestionClick={handleSend} />
         ) : (
-          <div className="px-8 lg:px-12 py-4 space-y-6">
+          <div className="px-4 md:px-8 lg:px-12 py-4 space-y-6">
             {messages.map((msg, i) => (
               <ChatMessageBubble
                 key={msg.id}

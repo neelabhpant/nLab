@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { API_BASE, getAuthHeaders } from '@/shared/lib/api'
 
 export interface Holding {
   account_type: string
@@ -105,7 +106,6 @@ interface PortfolioState {
   importProfile: () => Promise<void>
 }
 
-const API_BASE = 'http://localhost:8000/api/v1'
 
 const DEFAULT_ANSWERS: QuestionnaireAnswers = {
   goals: { selected: [], description: '' },
@@ -222,7 +222,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     try {
       const response = await fetch(`${API_BASE}/portfolio/recommend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify(get().answers),
       })
 
@@ -272,7 +272,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     try {
       const response = await fetch(`${API_BASE}/portfolio/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           messages: apiMessages,
           recommendation: get().recommendation,
@@ -363,7 +363,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
   importProfile: async () => {
     try {
-      const res = await fetch(`${API_BASE}/advisor/profile`)
+      const res = await fetch(`${API_BASE}/advisor/profile`, { headers: getAuthHeaders() })
       if (!res.ok) return
       const data = await res.json()
       const profile = data.profile

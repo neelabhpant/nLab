@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom'
 import {
   HelpCircle,
   Settings as SettingsIcon,
   ChevronRight,
+  X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChatWidget } from './chat-widget'
@@ -39,9 +40,162 @@ const pageVariants = {
   exit: { opacity: 0, y: -6 },
 }
 
+interface LayoutContext {
+  onMobileMenuToggle: () => void
+}
+
+export function useLayoutContext() {
+  return useOutletContext<LayoutContext>()
+}
+
+function SidebarContent({
+  navGroups,
+  expanded,
+  toggleGroup,
+  activeSpace,
+  location,
+  onNavClick,
+}: {
+  navGroups: NavGroup[]
+  expanded: Record<string, boolean>
+  toggleGroup: (key: string) => void
+  activeSpace: { id: string; basePath: string }
+  location: { pathname: string }
+  onNavClick?: () => void
+}) {
+  return (
+    <>
+      <div className="px-6 mb-8">
+        <div className="flex items-center gap-2.5" onClick={onNavClick} role={onNavClick ? 'button' : undefined}>
+          <div className="w-8 h-8 rounded-lg bg-cyan flex items-center justify-center">
+            <span className="text-xs font-display font-bold text-white">nL</span>
+          </div>
+          <span className="text-lg font-display font-bold text-foreground tracking-tight">
+            nLab
+          </span>
+        </div>
+      </div>
+
+      <nav className="flex flex-col gap-0.5 px-3 flex-1 overflow-y-auto">
+        {navGroups.map((group) => {
+          const GroupIcon = group.icon
+          const isOpen = expanded[group.key] ?? false
+          const hasActive = group.items.some((item) =>
+            item.to === activeSpace.basePath ? location.pathname === activeSpace.basePath : location.pathname.startsWith(item.to)
+          )
+
+          return (
+            <div key={group.key} className="mb-1">
+              <button
+                onClick={() => !group.comingSoon && toggleGroup(group.key)}
+                className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-display font-semibold uppercase tracking-wider transition-colors ${
+                  group.comingSoon
+                    ? 'text-sidebar-foreground/30 cursor-default'
+                    : hasActive
+                      ? 'text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/60 hover:text-sidebar-foreground cursor-pointer'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <GroupIcon className="w-4 h-4" strokeWidth={2} />
+                  {group.label}
+                </span>
+                {group.comingSoon ? (
+                  <span className="text-[9px] font-body font-medium normal-case tracking-normal px-1.5 py-0.5 rounded bg-surface-1 text-muted-foreground/50">
+                    Soon
+                  </span>
+                ) : (
+                  <motion.span
+                    animate={{ rotate: isOpen ? 90 : 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </motion.span>
+                )}
+              </button>
+
+              <AnimatePresence initial={false}>
+                {isOpen && !group.comingSoon && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex flex-col gap-0.5 pl-3 mt-0.5">
+                      {group.items.map(({ to, label, icon: Icon }) => (
+                        <NavLink
+                          key={to}
+                          to={to}
+                          end={to === activeSpace.basePath}
+                          onClick={onNavClick}
+                          className={({ isActive }) =>
+                            `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 ${
+                              isActive
+                                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                                : 'text-sidebar-foreground hover:bg-surface-1 hover:text-foreground'
+                            }`
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              {isActive && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-cyan" />
+                              )}
+                              <Icon className="w-[16px] h-[16px] flex-shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
+                              <span className="font-body">{label}</span>
+                            </>
+                          )}
+                        </NavLink>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )
+        })}
+      </nav>
+
+      <div className="px-3 mt-auto flex flex-col gap-0.5">
+        <div className="h-px bg-border mx-3 mb-2" />
+        <NavLink
+          to="/settings"
+          onClick={onNavClick}
+          className={({ isActive }) =>
+            `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              isActive
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                : 'text-sidebar-foreground hover:bg-surface-1 hover:text-foreground'
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-cyan" />
+              )}
+              <SettingsIcon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
+              <span className="font-body">Settings</span>
+            </>
+          )}
+        </NavLink>
+        <button
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-body text-muted-foreground hover:text-foreground hover:bg-surface-1 transition-all duration-200 cursor-pointer w-full text-left"
+        >
+          <HelpCircle className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.8} />
+          <span>Help Center</span>
+        </button>
+      </div>
+    </>
+  )
+}
+
 export function Layout() {
   const location = useLocation()
   const isChatPage = location.pathname === '/finance/chat'
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const activeSpace = useMemo(() =>
     SPACES.find((s) =>
@@ -74,6 +228,10 @@ export function Layout() {
     }
   }, [location.pathname, navGroups, activeSpace.basePath])
 
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
   const toggleGroup = useCallback((key: string) => {
     setExpanded((prev) => {
       const next = { ...prev, [key]: !prev[key] }
@@ -82,131 +240,59 @@ export function Layout() {
     })
   }, [])
 
+  const closeMobile = useCallback(() => setMobileOpen(false), [])
+  const toggleMobile = useCallback(() => setMobileOpen((v) => !v), [])
+
+  const outletContext = useMemo<LayoutContext>(() => ({ onMobileMenuToggle: toggleMobile }), [toggleMobile])
+
   return (
     <div className="flex h-screen bg-surface-0">
-      <aside className="w-[240px] border-r border-sidebar-border bg-sidebar flex flex-col py-6 flex-shrink-0">
-        <div className="px-6 mb-8">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-cyan flex items-center justify-center">
-              <span className="text-xs font-display font-bold text-white">nL</span>
-            </div>
-            <span className="text-lg font-display font-bold text-foreground tracking-tight">
-              nLab
-            </span>
-          </div>
-        </div>
-
-        <nav className="flex flex-col gap-0.5 px-3 flex-1 overflow-y-auto">
-          {navGroups.map((group) => {
-            const GroupIcon = group.icon
-            const isOpen = expanded[group.key] ?? false
-            const hasActive = group.items.some((item) =>
-              item.to === activeSpace.basePath ? location.pathname === activeSpace.basePath : location.pathname.startsWith(item.to)
-            )
-
-            return (
-              <div key={group.key} className="mb-1">
-                <button
-                  onClick={() => !group.comingSoon && toggleGroup(group.key)}
-                  className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-display font-semibold uppercase tracking-wider transition-colors ${
-                    group.comingSoon
-                      ? 'text-sidebar-foreground/30 cursor-default'
-                      : hasActive
-                        ? 'text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground/60 hover:text-sidebar-foreground cursor-pointer'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <GroupIcon className="w-4 h-4" strokeWidth={2} />
-                    {group.label}
-                  </span>
-                  {group.comingSoon ? (
-                    <span className="text-[9px] font-body font-medium normal-case tracking-normal px-1.5 py-0.5 rounded bg-surface-1 text-muted-foreground/50">
-                      Soon
-                    </span>
-                  ) : (
-                    <motion.span
-                      animate={{ rotate: isOpen ? 90 : 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </motion.span>
-                  )}
-                </button>
-
-                <AnimatePresence initial={false}>
-                  {isOpen && !group.comingSoon && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-                      className="overflow-hidden"
-                    >
-                      <div className="flex flex-col gap-0.5 pl-3 mt-0.5">
-                        {group.items.map(({ to, label, icon: Icon }) => (
-                          <NavLink
-                            key={to}
-                            to={to}
-                            end={to === activeSpace.basePath}
-                            className={({ isActive }) =>
-                              `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 ${
-                                isActive
-                                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-                                  : 'text-sidebar-foreground hover:bg-surface-1 hover:text-foreground'
-                              }`
-                            }
-                          >
-                            {({ isActive }) => (
-                              <>
-                                {isActive && (
-                                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-cyan" />
-                                )}
-                                <Icon className="w-[16px] h-[16px] flex-shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
-                                <span className="font-body">{label}</span>
-                              </>
-                            )}
-                          </NavLink>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )
-          })}
-        </nav>
-
-        <div className="px-3 mt-auto flex flex-col gap-0.5">
-          <div className="h-px bg-border mx-3 mb-2" />
-          <NavLink
-            to="/settings"
-            className={({ isActive }) =>
-              `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-                  : 'text-sidebar-foreground hover:bg-surface-1 hover:text-foreground'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-cyan" />
-                )}
-                <SettingsIcon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={isActive ? 2.2 : 1.8} />
-                <span className="font-body">Settings</span>
-              </>
-            )}
-          </NavLink>
-          <button
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-body text-muted-foreground hover:text-foreground hover:bg-surface-1 transition-all duration-200 cursor-pointer w-full text-left"
-          >
-            <HelpCircle className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={1.8} />
-            <span>Help Center</span>
-          </button>
-        </div>
+      <aside className="hidden md:flex w-[240px] border-r border-sidebar-border bg-sidebar flex-col py-6 flex-shrink-0">
+        <SidebarContent
+          navGroups={navGroups}
+          expanded={expanded}
+          toggleGroup={toggleGroup}
+          activeSpace={activeSpace}
+          location={location}
+        />
       </aside>
+
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-black/50 md:hidden"
+              onClick={closeMobile}
+            />
+            <motion.aside
+              initial={{ x: -240 }}
+              animate={{ x: 0 }}
+              exit={{ x: -240 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              className="fixed inset-y-0 left-0 z-50 w-[240px] bg-sidebar flex flex-col py-6 shadow-xl md:hidden"
+            >
+              <button
+                onClick={closeMobile}
+                className="absolute top-4 right-3 w-8 h-8 rounded-lg flex items-center justify-center text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-surface-1 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <SidebarContent
+                navGroups={navGroups}
+                expanded={expanded}
+                toggleGroup={toggleGroup}
+                activeSpace={activeSpace}
+                location={location}
+                onNavClick={closeMobile}
+              />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-auto relative">
@@ -220,7 +306,7 @@ export function Layout() {
               transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
               className="h-full"
             >
-              <Outlet />
+              <Outlet context={outletContext} />
             </motion.div>
           </AnimatePresence>
         </main>

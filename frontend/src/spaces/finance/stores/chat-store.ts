@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { API_BASE, getAuthHeaders } from '@/shared/lib/api'
 
 export interface ThinkingStep {
   content: string
@@ -24,7 +25,6 @@ interface ChatState {
   clearChat: () => void
 }
 
-const API_BASE = 'http://localhost:8000/api/v1'
 
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
@@ -69,7 +69,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ messages: apiMessages }),
       })
 

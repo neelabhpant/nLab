@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Play, Code2, FileText } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 import { PROJECTS, type ProjectStatus } from '@/spaces/labs/data/projects'
 
 const STATUS_STYLES: Record<ProjectStatus, { bg: string; text: string }> = {
@@ -17,6 +18,7 @@ const PLACEHOLDER_SECTIONS = [
 ]
 
 export function ProjectDetail() {
+  const { onMobileMenuToggle } = useLayoutContext()
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
@@ -25,7 +27,7 @@ export function ProjectDetail() {
   if (!project) {
     return (
       <div className="flex flex-col h-full">
-        <TopHeader title="Labs" subtitle="Project not found" />
+        <TopHeader title="Labs" subtitle="Project not found" onMenuToggle={onMobileMenuToggle} />
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -53,7 +55,7 @@ export function ProjectDetail() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title={project.name} subtitle="Labs project">
+      <TopHeader title={project.name} subtitle="Labs project" onMenuToggle={onMobileMenuToggle}>
         <button
           onClick={() => navigate('/labs')}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-display font-medium text-muted-foreground hover:text-foreground hover:bg-surface-1 transition-all duration-200 cursor-pointer"

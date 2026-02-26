@@ -127,7 +127,7 @@ export function RecommendationView({
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-4xl mx-auto px-8 py-8 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 py-4 md:px-8 md:py-8 space-y-6 md:space-y-8">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -167,7 +167,7 @@ export function RecommendationView({
             <h2 className="text-base font-display font-bold text-slate-900">Asset Allocation</h2>
           </div>
 
-          <div className="grid grid-cols-[280px_1fr] gap-8 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 md:gap-8 items-start">
             <div className="flex justify-center">
               <ResponsiveContainer width={260} height={260}>
                 <PieChart>
@@ -240,7 +240,7 @@ export function RecommendationView({
               </span>
             </div>
 
-            <div className="grid grid-cols-[1fr_200px] gap-6 items-center">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-4 md:gap-6 items-center">
               <div className="space-y-2">
                 {monthlyData.map((b, i) => (
                   <motion.div
@@ -288,7 +288,7 @@ export function RecommendationView({
           </motion.div>
         )}
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -372,7 +372,7 @@ export function RecommendationView({
           </motion.div>
         )}
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {recommendation.tax_notes && (
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -418,7 +418,7 @@ export function RecommendationView({
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="flex items-center justify-center gap-4 pt-4 pb-8"
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 pb-8"
         >
           <button
             onClick={onRefine}
