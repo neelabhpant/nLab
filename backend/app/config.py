@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     fred_api_key: str = ""
     coingecko_api_url: str = "https://api.coingecko.com/api/v3"
     cors_origins: str = "http://localhost:5173,http://localhost:5174"
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    jwt_secret: str = ""
+    allowed_emails: str = ""
+    vault_data_path: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

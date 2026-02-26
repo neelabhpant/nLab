@@ -30,7 +30,7 @@ export function ChatWidget() {
   }, [navigate])
 
   return (
-    <>
+    <div className="hidden md:contents">
       <AnimatePresence>
         {open && (
           <motion.div
@@ -131,6 +131,6 @@ export function ChatWidget() {
           )}
         </AnimatePresence>
       </motion.button>
-    </>
+    </div>
   )
 }

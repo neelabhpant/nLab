@@ -2,12 +2,14 @@ import { useCallback } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { usePortfolioStore } from '@/spaces/finance/stores/portfolio-store'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 import { Questionnaire } from '@/spaces/finance/components/portfolio/questionnaire'
 import { LoadingScreen } from '@/spaces/finance/components/portfolio/loading-screen'
 import { RecommendationView } from '@/spaces/finance/components/portfolio/recommendation-view'
 import { PortfolioChat } from '@/spaces/finance/components/portfolio/portfolio-chat'
 
 export function AdvisorPortfolio() {
+  const { onMobileMenuToggle } = useLayoutContext()
   const {
     recommendation,
     loading,
@@ -37,7 +39,7 @@ export function AdvisorPortfolio() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="Portfolio Advisor" subtitle="AI-powered portfolio recommendation" />
+      <TopHeader title="Portfolio Advisor" subtitle="AI-powered portfolio recommendation" onMenuToggle={onMobileMenuToggle} />
 
       {!loading && !recommendation && !error && (
         <Questionnaire onSubmit={handleSubmit} />

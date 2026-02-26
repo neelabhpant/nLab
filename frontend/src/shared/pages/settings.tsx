@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Save, Check, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 import { api } from '@/shared/lib/api'
 
 interface LlmSettings {
@@ -16,6 +17,7 @@ interface LlmSettings {
 }
 
 export function Settings() {
+  const { onMobileMenuToggle } = useLayoutContext()
   const [settings, setSettings] = useState<LlmSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -85,7 +87,7 @@ export function Settings() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="Settings" subtitle="LLM provider and model configuration" />
+      <TopHeader title="Settings" subtitle="LLM provider and model configuration" onMenuToggle={onMobileMenuToggle} />
       <div className="flex-1 overflow-auto p-6 lg:p-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">

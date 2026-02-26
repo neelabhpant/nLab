@@ -11,14 +11,14 @@ backoff==2.2.1
 bcrypt==5.0.0
 beautifulsoup4==4.13.5
 build==1.4.0
-cachetools==7.0.1
+cachetools==5.5.2
 certifi==2026.1.4
 cffi==2.0.0
 cfgv==3.5.0
 charset-normalizer==3.4.4
 chromadb==1.1.1
 click==8.1.8
-crewai==1.9.3
+crewai[anthropic]==1.9.3
 crewai-tools==1.9.3
 cryptography==46.0.5
 decorator==5.2.1
@@ -88,7 +88,7 @@ pdfplumber==0.11.9
 pillow==12.1.1
 platformdirs==4.9.2
 portalocker==2.7.0
-posthog==5.4.0
+posthog==3.7.0
 pre_commit==4.5.1
 propcache==0.4.1
 protobuf==5.29.6
@@ -149,5 +149,8 @@ yarl==1.22.0
 youtube-transcript-api==1.2.4
 zipp==3.23.0
 fredapi==0.5.2
+google-auth==2.38.0
+google-auth-oauthlib==1.2.1
 pandas==3.0.1
 yfinance==1.2.0
+litellm==1.72.1

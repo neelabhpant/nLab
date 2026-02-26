@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
+import { useLayoutContext } from '@/shared/components/layout'
 import { PROJECTS, type Project, type ProjectStatus } from '@/spaces/labs/data/projects'
 
 const STATUS_STYLES: Record<ProjectStatus, { bg: string; text: string }> = {
@@ -81,9 +82,10 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
 }
 
 export function Gallery() {
+  const { onMobileMenuToggle } = useLayoutContext()
   return (
     <div className="flex flex-col h-full">
-      <TopHeader title="Labs" subtitle="Experiments and explorations" />
+      <TopHeader title="Labs" subtitle="Experiments and explorations" onMenuToggle={onMobileMenuToggle} />
       <div className="flex-1 overflow-auto p-6 lg:p-8">
         <motion.div
           initial={{ opacity: 0 }}

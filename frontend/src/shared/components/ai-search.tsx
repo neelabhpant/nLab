@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Sparkles, X } from 'lucide-react'
 import Markdown from 'react-markdown'
-
-const API_BASE = 'http://localhost:8000/api/v1'
+import { API_BASE, getAuthHeaders } from '@/shared/lib/api'
 
 const COIN_COLORS: Record<string, string> = {
   BTC: '#F7931A', XRP: '#00D4FF', ETH: '#627EEA', SOL: '#00E599', DOGE: '#C3A634',
@@ -82,7 +81,7 @@ export function AISearch() {
     try {
       const res = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ messages: [{ role: 'user', content: trimmed }] }),
       })
 

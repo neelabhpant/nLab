@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { API_BASE, getAuthHeaders } from '@/shared/lib/api'
 
 export interface ThinkingStep {
   content: string
@@ -55,7 +56,6 @@ interface AdvisorState {
   clearUploadResult: () => void
 }
 
-const API_BASE = 'http://localhost:8000/api/v1'
 
 export const useAdvisorStore = create<AdvisorState>((set, get) => ({
   messages: [],
@@ -99,7 +99,7 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
     try {
       const response = await fetch(`${API_BASE}/advisor/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ messages: apiMessages }),
       })
 
@@ -176,7 +176,7 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
   fetchProfile: async () => {
     set({ profileLoading: true })
     try {
-      const res = await fetch(`${API_BASE}/advisor/profile`)
+      const res = await fetch(`${API_BASE}/advisor/profile`, { headers: getAuthHeaders() })
       if (res.ok) {
         const data = await res.json()
         set({ profile: data.profile })
@@ -199,7 +199,7 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
     try {
       const res = await fetch(`${API_BASE}/advisor/extract-profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ messages }),
       })
       if (res.ok) {
@@ -215,7 +215,7 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
     try {
       const res = await fetch(`${API_BASE}/advisor/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ section, data }),
       })
       if (res.ok) {
@@ -230,7 +230,7 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
   fetchDocuments: async () => {
     set({ documentsLoading: true })
     try {
-      const res = await fetch(`${API_BASE}/advisor/documents`)
+      const res = await fetch(`${API_BASE}/advisor/documents`, { headers: getAuthHeaders() })
       if (res.ok) {
         const data = await res.json()
         set({ documents: data })
@@ -249,6 +249,7 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
       form.append('file', file)
       const res = await fetch(`${API_BASE}/advisor/upload`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: form,
       })
       if (!res.ok) {

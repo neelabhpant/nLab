@@ -140,14 +140,15 @@ export function FunctionChart() {
                 fontSize: 12,
                 color: '#e2e8f0',
               }}
-              labelFormatter={(v: number) => {
+              labelFormatter={(v) => {
+                const n = Number(v)
                 if (hasLabels && labelMap) {
-                  const label = labelMap.get(Number(v.toFixed(4)))
-                  return label || `x = ${v.toFixed(3)}`
+                  const label = labelMap.get(Number(n.toFixed(4)))
+                  return label || `x = ${n.toFixed(3)}`
                 }
-                return `x = ${v.toFixed(3)}`
+                return `x = ${n.toFixed(3)}`
               }}
-              formatter={(v: number) => [v.toFixed(4), 'y']}
+              formatter={(v) => [Number(v).toFixed(4), 'y']}
             />
             <Area
               type="monotone"

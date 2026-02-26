@@ -134,7 +134,7 @@ def _llm_extract(content: str, is_image: bool = False, image_b64: str | None = N
             messages=messages,
             api_key=api_key,
             temperature=0.1,
-            max_tokens=2000,
+            max_completion_tokens=2000,
             response_format={"type": "json_object"},
         )
         raw = response.choices[0].message.content
