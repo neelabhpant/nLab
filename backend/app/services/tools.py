@@ -3,7 +3,7 @@ import json
 from typing import Any, Coroutine, Type
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.services.coingecko import get_current_prices, get_historical
 from app.services.news import get_news
@@ -57,6 +57,14 @@ class GetHistoricalDataInput(BaseModel):
         description="Number of days of history (1-365). Default 30.",
     )
 
+    @field_validator("days", mode="before")
+    @classmethod
+    def coerce_days(cls, v: object) -> int:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 30
+
 
 class GetHistoricalDataTool(BaseTool):
     name: str = "get_historical_data"
@@ -98,6 +106,14 @@ class CompareAssetsInput(BaseModel):
         "minmax",
         description="Normalization method: 'minmax' (0-1 scale) or 'zscore' (standard deviations). Default 'minmax'.",
     )
+
+    @field_validator("days", mode="before")
+    @classmethod
+    def coerce_days(cls, v: object) -> int:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 30
 
 
 def _pearson(a: list[float], b: list[float]) -> float | None:
@@ -189,6 +205,14 @@ class GetNewsInput(BaseModel):
         10,
         description="Number of articles to retrieve (1-20). Default 10.",
     )
+
+    @field_validator("limit", mode="before")
+    @classmethod
+    def coerce_limit(cls, v: object) -> int:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 10
 
 
 class GetNewsTool(BaseTool):
