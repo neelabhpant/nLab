@@ -7,6 +7,8 @@ import {
   MessageSquare,
   BriefcaseBusiness,
   PieChart,
+  CandlestickChart,
+  Bot,
 } from 'lucide-react'
 import type { NavGroup } from '@/spaces/registry'
 
@@ -19,6 +21,8 @@ export const FINANCE_NAV_GROUPS: NavGroup[] = [
       { to: '/finance', label: 'Overview', icon: LayoutDashboard },
       { to: '/finance/analytics', label: 'Analytics', icon: BarChart3 },
       { to: '/finance/chat', label: 'Market Chat', icon: MessageSquare },
+      { to: '/finance/trading', label: 'Trading', icon: CandlestickChart },
+      { to: '/finance/trading/agents', label: 'AI Agents', icon: Bot },
     ],
   },
   {

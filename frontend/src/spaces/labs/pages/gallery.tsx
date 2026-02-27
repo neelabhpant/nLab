@@ -22,7 +22,7 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08 }}
-      onClick={() => navigate(`/labs/${project.id}`)}
+      onClick={() => navigate(project.route ?? `/labs/${project.id}`)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="relative rounded-xl bg-surface-0 overflow-hidden cursor-pointer"
