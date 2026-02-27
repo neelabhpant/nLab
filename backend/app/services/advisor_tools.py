@@ -4,7 +4,7 @@ import json
 from typing import Type
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.services.documents import search_documents
 from app.services.user_profile import (
@@ -23,6 +23,14 @@ class SearchDocumentsInput(BaseModel):
         5,
         description="Number of document chunks to return (1-10). Default 5.",
     )
+
+    @field_validator("n_results", mode="before")
+    @classmethod
+    def coerce_n_results(cls, v: object) -> int:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 5
 
 
 class SearchDocumentsTool(BaseTool):
