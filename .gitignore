@@ -20,6 +20,9 @@ backend/data/
 # Project meta
 CLAUDE.md
 
+# Demo videos
+demo_videos/
+
 # OS & IDE
 .DS_Store
 .vscode/

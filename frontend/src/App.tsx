@@ -7,7 +7,10 @@ import { Chat } from '@/spaces/finance/pages/chat'
 import { Settings } from '@/shared/pages/settings'
 import { AdvisorFinancial } from '@/spaces/finance/pages/advisor-financial'
 import { AdvisorPortfolio } from '@/spaces/finance/pages/advisor-portfolio'
+import { Trading } from '@/spaces/finance/pages/trading'
+import { TradingAgents } from '@/spaces/finance/pages/trading-agents'
 import { Gallery } from '@/spaces/labs/pages/gallery'
+import { Workshop } from '@/spaces/labs/pages/workshop'
 import { FunctionToMusic } from '@/spaces/labs/pages/function-to-music'
 import { ProjectDetail } from '@/spaces/labs/pages/project-detail'
 import { Vault } from '@/shared/pages/vault'
@@ -60,7 +63,10 @@ function AppRoutes() {
         <Route path="/finance/chat" element={<Chat />} />
         <Route path="/finance/advisor/financial" element={<AdvisorFinancial />} />
         <Route path="/finance/advisor/portfolio" element={<AdvisorPortfolio />} />
+        <Route path="/finance/trading" element={<Trading />} />
+        <Route path="/finance/trading/agents" element={<TradingAgents />} />
         <Route path="/labs" element={<Gallery />} />
+        <Route path="/labs/workshop" element={<Workshop />} />
         <Route path="/labs/function-to-music" element={<FunctionToMusic />} />
         <Route path="/labs/:projectId" element={<ProjectDetail />} />
         <Route path="/vault" element={<Vault />} />

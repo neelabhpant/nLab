@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     allowed_emails: str = ""
     vault_data_path: str = ""
+    alpaca_api_key: str = ""
+    alpaca_secret_key: str = ""
+    alpaca_base_url: str = "https://paper-api.alpaca.markets/v2"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

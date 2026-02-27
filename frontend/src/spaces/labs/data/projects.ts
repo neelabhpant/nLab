@@ -7,6 +7,7 @@ export interface Project {
   tags: string[]
   status: ProjectStatus
   accent: string
+  route?: string
 }
 
 export const PROJECTS: Project[] = [
@@ -20,12 +21,13 @@ export const PROJECTS: Project[] = [
     accent: '#BD6BFF',
   },
   {
-    id: 'agent-workflow-engine',
-    name: 'Agent Workflow Engine',
+    id: 'crew-canvas',
+    name: 'Crew Canvas',
     description:
-      'Autonomous AI agents that chain tasks and tools into workflows. Define goals, let agents decompose them into steps, select tools, and execute — with human-in-the-loop checkpoints.',
-    tags: ['AI', 'CrewAI', 'Automation'],
-    status: 'In Progress',
-    accent: '#F5A623',
+      'Design, observe, and learn how multi-agent AI crews work. Describe a goal, watch it decompose into specialized agents, and observe real-time execution with tool calls, handoffs, and results.',
+    tags: ['AI', 'CrewAI', 'Education', 'Agents'],
+    status: 'Active',
+    accent: '#00D4FF',
+    route: '/labs/workshop',
   },
 ]
