@@ -1,44 +1,51 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, RefreshCw } from 'lucide-react'
+import { Sparkles, RefreshCw, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { api } from '@/shared/lib/api'
 
 const COIN_COLORS: Record<string, string> = {
-  BTC: '#F7931A', XRP: '#0EA5E9', ETH: '#627EEA',
-  Bitcoin: '#F7931A', Ripple: '#0EA5E9', Ethereum: '#627EEA',
+  BTC: '#F7931A',
+  XRP: '#0EA5E9',
+  ETH: '#627EEA',
+  SOL: '#14B8A6',
+  DOGE: '#C3A634',
 }
 
-function formatFinancialText(text: string): (string | ReactNode)[] {
-  const parts: (string | ReactNode)[] = []
-  const regex = /(\$[\d,]+(?:\.\d+)?(?:[TBMK])?)|([+-]?\d+(?:\.\d+)?%)|(\b(?:BTC|XRP|ETH|Bitcoin|Ripple|Ethereum)\b)/g
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-  let keyIdx = 0
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index))
-    const [full] = match
-    if (match[1]) {
-      parts.push(<span key={`f-${keyIdx++}`} className="font-display font-semibold text-slate-900">{full}</span>)
-    } else if (match[2]) {
-      const isNeg = full.startsWith('-')
-      const isPos = full.startsWith('+') || (!isNeg && parseFloat(full) > 0)
-      parts.push(<span key={`p-${keyIdx++}`} className={`font-display font-semibold ${isNeg ? 'text-loss' : isPos ? 'text-gain' : 'text-slate-900'}`}>{full}</span>)
-    } else if (match[3]) {
-      parts.push(<span key={`c-${keyIdx++}`} className="font-display font-semibold" style={{ color: COIN_COLORS[full] }}>{full}</span>)
-    }
-    lastIndex = match.index + full.length
-  }
-  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
-  return parts
+const SENTIMENT_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof TrendingUp }> = {
+  bullish: { label: 'Bullish', color: 'text-gain', bg: 'bg-gain/10', icon: TrendingUp },
+  bearish: { label: 'Bearish', color: 'text-loss', bg: 'bg-loss/10', icon: TrendingDown },
+  neutral: { label: 'Neutral', color: 'text-slate-500', bg: 'bg-surface-2', icon: Minus },
 }
 
 function formatTime(ts: number): string {
   return new Date(ts * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
+function highlightMetrics(text: string): React.ReactNode[] {
+  const parts = text.split(/(\$[\d,]+(?:\.\d+)?|[+-]?\d+(?:\.\d+)?%)/g)
+  return parts.map((part, i) => {
+    if (/^\$[\d,]+(?:\.\d+)?$/.test(part)) {
+      return <span key={i} className="font-semibold text-slate-800">{part}</span>
+    }
+    if (/^[+-]?\d+(?:\.\d+)?%$/.test(part)) {
+      const isNeg = part.startsWith('-')
+      return <span key={i} className={`font-semibold ${isNeg ? 'text-loss' : 'text-gain'}`}>{part}</span>
+    }
+    return part
+  })
+}
+
+interface TopMover {
+  coin: string
+  change: string
+  reason: string
+}
+
 interface BriefData {
-  content: string
+  headline: string
+  summary: string
+  sentiment: string
+  top_mover: TopMover | null
   generated_at: number
 }
 
@@ -77,24 +84,32 @@ export function MarketBrief() {
     fetchBrief()
   }, [fetchBrief])
 
+  const sentimentKey = brief?.sentiment?.toLowerCase() ?? 'neutral'
+  const sentiment = SENTIMENT_CONFIG[sentimentKey] ?? SENTIMENT_CONFIG.neutral
+  const SentimentIcon = sentiment.icon
+  const moverColor = brief?.top_mover?.coin ? COIN_COLORS[brief.top_mover.coin] ?? '#6B7280' : '#6B7280'
+  const moverChange = brief?.top_mover?.change ?? ''
+  const moverIsNeg = moverChange.startsWith('-')
+  const MoverArrow = moverIsNeg ? ArrowDownRight : ArrowUpRight
+
+  const summaryNodes = useMemo(
+    () => (brief?.summary ? highlightMetrics(brief.summary) : null),
+    [brief?.summary]
+  )
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.12 }}
-      className="rounded-xl border border-border bg-surface-0 p-5 shadow-sm mb-6"
+      className="rounded-xl border border-border bg-surface-0 p-5 shadow-sm h-full flex flex-col"
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-cyan/10 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-cyan" />
           </div>
           <span className="text-sm font-display font-semibold text-slate-900">AI Market Brief</span>
-          {brief && (
-            <span className="text-[10px] text-slate-400 font-body">
-              {formatTime(brief.generated_at)}
-            </span>
-          )}
         </div>
         <button
           onClick={handleRefresh}
@@ -107,7 +122,7 @@ export function MarketBrief() {
       </div>
 
       {loading || refreshing ? (
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 mb-3">
             <div className="flex gap-1">
               {[0, 1, 2].map((i) => (
@@ -134,9 +149,58 @@ export function MarketBrief() {
           Failed to generate market brief. Click refresh to try again.
         </p>
       ) : brief ? (
-        <p className="text-[13px] text-slate-600 font-body leading-relaxed">
-          {formatFinancialText(brief.content)}
-        </p>
+        <div className="flex flex-col flex-1">
+          <div className="flex items-start gap-2 mb-3">
+            <p className="text-[15px] font-display font-semibold text-slate-900 leading-snug flex-1">
+              {brief.headline}
+            </p>
+            <motion.span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-display font-bold flex-shrink-0 ${sentiment.color} ${sentiment.bg}`}
+            >
+              <motion.span
+                animate={sentimentKey !== 'neutral' ? { scale: [1, 1.2, 1] } : undefined}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <SentimentIcon className="w-2.5 h-2.5" />
+              </motion.span>
+              {sentiment.label}
+            </motion.span>
+          </div>
+
+          {brief.top_mover && (
+            <div
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-1 mb-3 border-l-2"
+              style={{ borderLeftColor: moverColor }}
+            >
+              <span
+                className="text-xs font-display font-bold tracking-wide"
+                style={{ color: moverColor }}
+              >
+                {brief.top_mover.coin}
+              </span>
+              <span className={`inline-flex items-center gap-0.5 text-xs font-display font-bold ${moverIsNeg ? 'text-loss' : 'text-gain'}`}>
+                <MoverArrow className="w-3 h-3" />
+                {moverChange}
+              </span>
+              <span className="w-px h-3 bg-slate-200" />
+              <span className="text-[11px] text-slate-500 font-body leading-snug line-clamp-1">
+                {brief.top_mover.reason}
+              </span>
+            </div>
+          )}
+
+          <p className="text-[12px] text-slate-500 font-body leading-relaxed flex-1">
+            {summaryNodes}
+          </p>
+
+          {brief.generated_at && (
+            <div className="flex justify-end mt-3 pt-2 border-t border-border/40">
+              <span className="text-[10px] text-slate-400 font-body">
+                Updated {formatTime(brief.generated_at)}
+              </span>
+            </div>
+          )}
+        </div>
       ) : null}
     </motion.div>
   )

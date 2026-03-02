@@ -8,6 +8,10 @@ export interface NewsArticle {
   published_at: number
   image_url: string
   related_coins: string[]
+  body: string
+  upvotes: number
+  downvotes: number
+  source_img: string
 }
 
 interface NewsState {

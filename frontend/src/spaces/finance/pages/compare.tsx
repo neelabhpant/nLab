@@ -15,6 +15,8 @@ import { useLayoutContext } from '@/shared/components/layout'
 import { SentimentHeatmap } from '@/spaces/finance/components/sentiment-heatmap'
 import { SentimentTrendChart } from '@/spaces/finance/components/sentiment-trend-chart'
 import { SentimentSummary } from '@/spaces/finance/components/sentiment-summary'
+import { SentimentGauge } from '@/spaces/finance/components/sentiment-gauge'
+import { SentimentNews } from '@/spaces/finance/components/sentiment-news'
 import { CorrelationAnalysis } from '@/spaces/finance/components/correlation-analysis'
 
 type Section = 'correlation' | 'sentiment'
@@ -251,7 +253,7 @@ export function Compare() {
       </>)}
 
       {section === 'sentiment' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -302,9 +304,17 @@ export function Compare() {
             </div>
           </motion.div>
 
-          <SentimentSummary summaries={summaries} loading={summaryLoading} />
-          <SentimentHeatmap data={heatmap} loading={heatmapLoading} />
-          <SentimentTrendChart data={heatmap} loading={heatmapLoading} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SentimentSummary summaries={summaries} loading={summaryLoading} />
+            <SentimentGauge summaries={summaries} loading={summaryLoading} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <SentimentTrendChart data={heatmap} loading={heatmapLoading} />
+            <SentimentHeatmap data={heatmap} loading={heatmapLoading} />
+          </div>
+
+          <SentimentNews />
         </div>
       )}
       </div>

@@ -92,9 +92,15 @@ export function SentimentHeatmap({ data, loading }: SentimentHeatmapProps) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="rounded-xl border border-border bg-surface-0 p-6 shadow-sm relative"
+      className="rounded-xl border border-border bg-surface-0 shadow-sm relative h-full flex flex-col"
     >
-      <div className="overflow-x-auto">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border flex-shrink-0">
+        <span className="text-sm font-display font-semibold text-slate-900">Sentiment Heatmap</span>
+        <span className="text-[10px] text-slate-400 font-body ml-auto">
+          {maxCols} days · {data.length} assets
+        </span>
+      </div>
+      <div className="flex-1 overflow-x-auto p-5">
         <div className="min-w-[600px]">
           {data.map((coinData, rowIdx) => {
             const meta = AVAILABLE_COINS.find((c) => c.id === coinData.coin)
@@ -185,9 +191,6 @@ export function SentimentHeatmap({ data, loading }: SentimentHeatmapProps) {
             <span className="inline-block w-3 h-2.5 border border-dashed border-slate-300 rounded-sm ml-1" />
             <span className="text-[10px] text-slate-400 font-body">No data</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-body">
-            {maxCols} days · {data.length} assets
-          </span>
         </div>
       </div>
 

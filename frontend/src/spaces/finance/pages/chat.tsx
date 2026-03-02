@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Trash2 } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { useChatStore } from '@/spaces/finance/stores/chat-store'
 import { ChatMessageBubble } from '@/spaces/finance/components/chat-message'
 import { ChatInput } from '@/spaces/finance/components/chat-input'
@@ -11,7 +12,19 @@ import { useLayoutContext } from '@/shared/components/layout'
 export function Chat() {
   const { onMobileMenuToggle } = useLayoutContext()
   const { messages, streaming, sendMessage, clearChat } = useChatStore()
+  const [searchParams, setSearchParams] = useSearchParams()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const initialQueryHandled = useRef(false)
+
+  useEffect(() => {
+    if (initialQueryHandled.current) return
+    const q = searchParams.get('q')
+    if (q && !streaming && messages.length === 0) {
+      initialQueryHandled.current = true
+      setSearchParams({}, { replace: true })
+      sendMessage(q)
+    }
+  }, [searchParams, setSearchParams, sendMessage, streaming, messages.length])
 
   useEffect(() => {
     if (scrollRef.current) {

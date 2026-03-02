@@ -20,6 +20,8 @@ import { ErrorCard } from '@/shared/components/error-card'
 import { NewsFeed } from '@/spaces/finance/components/news-feed'
 import { MarketBrief } from '@/spaces/finance/components/market-brief'
 import { SentimentStrip } from '@/spaces/finance/components/sentiment-strip'
+import { SentimentTrendMini } from '@/spaces/finance/components/sentiment-trend-mini'
+import { CorrelationMini } from '@/spaces/finance/components/correlation-mini'
 
 const ALL_MARKET_COINS = ['bitcoin', 'ripple', 'ethereum', 'solana', 'dogecoin']
 const PRICE_REFRESH = 60_000
@@ -209,9 +211,15 @@ export function Dashboard() {
 
         </div>
 
-        <SentimentStrip />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <SentimentStrip />
+          <MarketBrief />
+        </div>
 
-        <MarketBrief />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <SentimentTrendMini />
+          <CorrelationMini />
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -344,7 +352,7 @@ export function Dashboard() {
                     <tr
                       key={coin.coin_id}
                       className="border-b border-border/50 last:border-b-0 hover:bg-surface-1/50 transition-colors cursor-pointer group"
-                      onClick={() => navigate(`/finance/analytics?coins=bitcoin,${coin.coin_id}&days=30`)}
+                      onClick={() => navigate(`/finance/chat?q=What's happening with ${meta.name} (${meta.symbol}) today? Give me a quick market analysis.`)}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -402,7 +410,7 @@ export function Dashboard() {
         </div>
 
         <div className="w-full xl:w-[340px] flex-shrink-0">
-          <div className="xl:sticky xl:top-0 xl:max-h-[calc(100vh-8rem)]">
+          <div className="xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] flex flex-col">
             <NewsFeed />
           </div>
         </div>

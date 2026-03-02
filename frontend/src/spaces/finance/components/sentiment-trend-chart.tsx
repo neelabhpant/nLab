@@ -75,9 +75,15 @@ export function SentimentTrendChart({ data, loading }: SentimentTrendChartProps)
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="rounded-xl border border-border bg-surface-0 p-6 shadow-sm"
+      className="rounded-xl border border-border bg-surface-0 shadow-sm h-full flex flex-col"
     >
-      <div className="h-[300px]">
+      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border flex-shrink-0">
+        <span className="text-sm font-display font-semibold text-slate-900">Sentiment Trend</span>
+        <span className="text-[10px] text-slate-400 font-body ml-auto">
+          Score range [-1, +1]
+        </span>
+      </div>
+      <div className="flex-1 p-5 min-h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 4, left: -12 }}>
             <CartesianGrid strokeDasharray="3 6" stroke="#E5E7EB" vertical={false} />
@@ -119,7 +125,7 @@ export function SentimentTrendChart({ data, loading }: SentimentTrendChartProps)
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
+      <div className="flex items-center gap-4 px-5 pb-4">
         {data.map((coinData) => {
           const meta = AVAILABLE_COINS.find((c) => c.id === coinData.coin)
           return (
@@ -129,9 +135,6 @@ export function SentimentTrendChart({ data, loading }: SentimentTrendChartProps)
             </div>
           )
         })}
-        <span className="text-[10px] text-muted-foreground/40 ml-auto font-body">
-          Sentiment range [-1, +1]
-        </span>
       </div>
     </motion.div>
   )

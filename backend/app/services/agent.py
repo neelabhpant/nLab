@@ -1,11 +1,34 @@
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncGenerator
 
 from app.services.crew import build_crew
 
 logger = logging.getLogger(__name__)
+
+CHUNK_SIZE = 4
+CHUNK_DELAY = 0.025
+
+
+def _split_into_chunks(text: str, size: int = CHUNK_SIZE) -> list[str]:
+    """Split text into word-based chunks preserving whitespace."""
+    tokens = re.split(r'(\s+)', text)
+    chunks: list[str] = []
+    current = ""
+    word_count = 0
+    for token in tokens:
+        current += token
+        if token.strip():
+            word_count += 1
+        if word_count >= size:
+            chunks.append(current)
+            current = ""
+            word_count = 0
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 async def stream_crew_response(
@@ -14,7 +37,8 @@ async def stream_crew_response(
     """Stream a CrewAI crew response as SSE events.
 
     Accepts a list of message dicts with 'role' and 'content' keys.
-    Extracts the latest user message, builds a crew, and streams the result.
+    Extracts the latest user message, builds a crew, and streams the result
+    as incremental text_delta events for a token-by-token appearance.
     """
     user_message = ""
     for msg in reversed(messages):
@@ -38,7 +62,12 @@ async def stream_crew_response(
 
         response_text = str(result)
 
-        yield f"data: {json.dumps({'type': 'text', 'content': response_text})}\n\n"
+        chunks = _split_into_chunks(response_text, CHUNK_SIZE)
+        for chunk in chunks:
+            yield f"data: {json.dumps({'type': 'text_delta', 'content': chunk})}\n\n"
+            await asyncio.sleep(CHUNK_DELAY)
+
+        yield f"data: {json.dumps({'type': 'text_done'})}\n\n"
 
     except Exception as e:
         logger.exception("Crew execution failed")

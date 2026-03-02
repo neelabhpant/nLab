@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -39,10 +41,21 @@ async def chat(request: ChatRequest) -> StreamingResponse | JSONResponse:
     )
 
 
-class MarketBriefResponse(BaseModel):
-    """AI-generated market brief."""
+class TopMover(BaseModel):
+    """Top-moving coin data."""
 
-    content: str
+    coin: str
+    change: str
+    reason: str
+
+
+class MarketBriefResponse(BaseModel):
+    """AI-generated structured market brief."""
+
+    headline: str
+    summary: str
+    sentiment: str
+    top_mover: Optional[TopMover] = None
     generated_at: int
 
 

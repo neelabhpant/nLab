@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop
+from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop, forecast
 from app.routers import settings as settings_router
 from app.services.auth import verify_token
 from app.services.vault_storage import VaultStorage
@@ -69,6 +69,7 @@ app.include_router(vault.router, prefix="/api/v1")
 app.include_router(trading.router, prefix="/api/v1")
 app.include_router(trading_agents.router, prefix="/api/v1")
 app.include_router(workshop.router, prefix="/api/v1")
+app.include_router(forecast.router, prefix="/api/v1")
 
 
 @app.on_event("startup")

@@ -98,8 +98,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
           try {
             const event = JSON.parse(payload) as {
-              type: 'thinking' | 'text' | 'error'
-              content: string
+              type: 'thinking' | 'text' | 'text_delta' | 'text_done' | 'error'
+              content?: string
             }
 
             set((state) => {
@@ -110,12 +110,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
               if (event.type === 'thinking') {
                 last.thinkingSteps = [
                   ...last.thinkingSteps,
-                  { content: event.content, timestamp: Date.now() },
+                  { content: event.content ?? '', timestamp: Date.now() },
                 ]
+              } else if (event.type === 'text_delta') {
+                last.content += event.content ?? ''
               } else if (event.type === 'text') {
-                last.content = event.content
+                last.content = event.content ?? ''
+              } else if (event.type === 'text_done') {
+                // streaming text complete — no action needed
               } else if (event.type === 'error') {
-                last.content = event.content
+                last.content = event.content ?? ''
               }
 
               return { messages: msgs }

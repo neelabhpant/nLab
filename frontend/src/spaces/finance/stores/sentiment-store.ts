@@ -23,11 +23,14 @@ interface SentimentSummaryItem {
 
 interface SentimentState {
   heatmap: CoinHeatmapData[]
+  trend: CoinHeatmapData[]
   summaries: SentimentSummaryItem[]
   heatmapLoading: boolean
+  trendLoading: boolean
   summaryLoading: boolean
   error: string | null
   fetchHeatmap: (coins: string[], days: number) => Promise<void>
+  fetchTrend: (coins: string[], days: number) => Promise<void>
   fetchSummary: (coins: string[]) => Promise<void>
 }
 
@@ -35,8 +38,10 @@ export type { DailyScore, CoinHeatmapData, SentimentSummaryItem }
 
 export const useSentimentStore = create<SentimentState>((set) => ({
   heatmap: [],
+  trend: [],
   summaries: [],
   heatmapLoading: false,
+  trendLoading: false,
   summaryLoading: false,
   error: null,
 
@@ -49,6 +54,18 @@ export const useSentimentStore = create<SentimentState>((set) => ({
       set({ heatmap: data.coins, heatmapLoading: false })
     } catch {
       set({ heatmapLoading: false })
+    }
+  },
+
+  fetchTrend: async (coins, days) => {
+    set({ trendLoading: true, error: null })
+    try {
+      const { data } = await api.get<{ coins: CoinHeatmapData[] }>(
+        `/sentiment/trend?coins=${coins.join(',')}&days=${days}`
+      )
+      set({ trend: data.coins, trendLoading: false })
+    } catch {
+      set({ trendLoading: false })
     }
   },
 

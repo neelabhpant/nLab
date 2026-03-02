@@ -35,10 +35,14 @@ export interface UploadResult {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type UserProfile = Record<string, any>
 
+type QueryType = 'simple' | 'personal' | 'research' | 'full' | null
+
 interface AdvisorState {
   messages: AdvisorMessage[]
   streaming: boolean
   error: string | null
+  queryType: QueryType
+  activeAgents: string[]
   profile: UserProfile | null
   profileLoading: boolean
   documents: DocumentMeta[]
@@ -61,6 +65,8 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
   messages: [],
   streaming: false,
   error: null,
+  queryType: null,
+  activeAgents: [],
   profile: null,
   profileLoading: false,
   documents: [],
@@ -128,8 +134,12 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
 
           try {
             const event = JSON.parse(payload) as {
-              type: 'thinking' | 'text' | 'error'
-              content: string
+              type: string
+              content?: string
+              query_type?: string
+              agents?: string[]
+              agent?: string
+              tool?: string
             }
 
             set((state) => {
@@ -137,18 +147,34 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
               const last = msgs[msgs.length - 1]
               if (last.id !== assistantMessage.id) return state
 
-              if (event.type === 'thinking') {
+              const updates: Partial<AdvisorState> = { messages: msgs }
+
+              if (event.type === 'routing' && event.query_type) {
+                updates.queryType = event.query_type as QueryType
+              } else if (event.type === 'crew_start' && event.agents) {
+                updates.activeAgents = event.agents
+              } else if (event.type === 'thinking' && event.content) {
                 last.thinkingSteps = [
                   ...last.thinkingSteps,
                   { content: event.content, timestamp: Date.now() },
                 ]
-              } else if (event.type === 'text') {
+              } else if (event.type === 'agent_start' && event.content) {
+                last.thinkingSteps = [
+                  ...last.thinkingSteps,
+                  { content: event.content, timestamp: Date.now() },
+                ]
+              } else if (event.type === 'tool_call' && event.tool) {
+                last.thinkingSteps = [
+                  ...last.thinkingSteps,
+                  { content: `Using ${event.tool}`, timestamp: Date.now() },
+                ]
+              } else if (event.type === 'text' && event.content) {
                 last.content = event.content
-              } else if (event.type === 'error') {
+              } else if (event.type === 'error' && event.content) {
                 last.content = event.content
               }
 
-              return { messages: msgs }
+              return updates
             })
           } catch {
             // skip malformed JSON
@@ -166,7 +192,7 @@ export const useAdvisorStore = create<AdvisorState>((set, get) => ({
         return { messages: msgs, error: message }
       })
     } finally {
-      set({ streaming: false })
+      set({ streaming: false, queryType: null, activeAgents: [] })
       get().extractProfileFromChat()
     }
   },

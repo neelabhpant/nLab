@@ -57,14 +57,18 @@ async def get_news(coins: list[str] | None = None, limit: int = 20) -> list[dict
         cats_str = article.get("categories", "")
         related = [c.strip() for c in cats_str.split("|") if c.strip()] if cats_str else []
 
+        source_info = article.get("source_info", {})
         articles.append({
             "title": article.get("title", ""),
-            "source": article.get("source_info", {}).get("name", article.get("source", "")),
+            "source": source_info.get("name", article.get("source", "")),
             "url": article.get("url", ""),
             "published_at": article.get("published_on", 0),
             "image_url": article.get("imageurl", ""),
             "related_coins": related,
             "body": article.get("body", ""),
+            "upvotes": int(article.get("upvotes", 0) or 0),
+            "downvotes": int(article.get("downvotes", 0) or 0),
+            "source_img": source_info.get("img", ""),
         })
 
     _news_cache[cache_key] = articles

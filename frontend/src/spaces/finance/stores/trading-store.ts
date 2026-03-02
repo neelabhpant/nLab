@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { api } from '@/shared/lib/api'
+import { api, getAuthHeaders } from '@/shared/lib/api'
 
 export interface TradingAccount {
   id: string
@@ -76,8 +76,23 @@ export interface TradingObjective {
   updated_at: string
 }
 
+export interface AgentEvent {
+  event: string
+  agent?: string
+  agent_index?: number
+  agents?: string[]
+  tool?: string
+  tool_input?: string
+  text?: string
+  summary?: string
+  message?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result?: any
+}
+
 export interface TradeProposal {
   id: string
+  batch_id: string
   symbol: string
   action: string
   qty: number
@@ -85,6 +100,14 @@ export interface TradeProposal {
   expected_impact: string
   risk_level: string
   risk_review: string
+  confidence: number
+  entry_price: number | null
+  price_target: number | null
+  stop_loss: number | null
+  time_horizon: string
+  catalyst: string
+  technical_summary: string
+  agent_reasoning: Record<string, string>
   status: 'pending' | 'approved' | 'rejected' | 'executed'
   created_at: string
   reviewed_at: string | null
@@ -110,6 +133,10 @@ interface TradingState {
   generatingProposals: boolean
   proposalExecuting: string | null
 
+  agentEvents: AgentEvent[]
+  activeAgentIndex: number
+  agentRoles: string[]
+
   fetchAccount: () => Promise<void>
   fetchPositions: () => Promise<void>
   fetchOrders: (status?: string) => Promise<void>
@@ -121,10 +148,13 @@ interface TradingState {
   fetchObjective: () => Promise<void>
   saveObjective: (obj: Omit<TradingObjective, 'created_at' | 'updated_at' | 'status'>) => Promise<boolean>
   generateProposals: () => Promise<boolean>
+  generateProposalsStreaming: () => void
+  clearAgentEvents: () => void
   fetchProposals: () => Promise<void>
   approveProposal: (id: string) => Promise<boolean>
   rejectProposal: (id: string) => Promise<boolean>
   executeProposal: (id: string) => Promise<boolean>
+  clearResolved: () => Promise<void>
 }
 
 export const useTradingStore = create<TradingState>((set, get) => ({
@@ -146,6 +176,10 @@ export const useTradingStore = create<TradingState>((set, get) => ({
   objectiveLoading: false,
   generatingProposals: false,
   proposalExecuting: null,
+
+  agentEvents: [],
+  activeAgentIndex: 0,
+  agentRoles: [],
 
   fetchAccount: async () => {
     set({ accountLoading: true })
@@ -254,6 +288,79 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     }
   },
 
+  generateProposalsStreaming: () => {
+    set({ generatingProposals: true, agentEvents: [], activeAgentIndex: 0, agentRoles: [] })
+    const baseUrl = api.defaults.baseURL || ''
+    const url = `${baseUrl}/trading/proposals/generate/stream`
+
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } })
+      .then(async (response) => {
+        if (!response.ok || !response.body) {
+          set({ generatingProposals: false })
+          return
+        }
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        const processLine = (line: string) => {
+          if (!line.startsWith('data:')) return
+          const raw = line.slice(5).trim()
+          if (!raw) return
+          try {
+            const evt: AgentEvent = JSON.parse(raw)
+            if (evt.event === 'heartbeat') return
+            if (evt.event === 'done') {
+              const proposals = evt.result?.proposals ?? []
+              set((s) => ({
+                proposals: [...proposals, ...s.proposals.filter((p) => p.status === 'rejected' || p.status === 'executed')],
+                generatingProposals: false,
+                agentEvents: [...s.agentEvents, evt],
+              }))
+              return
+            }
+            if (evt.event === 'error') {
+              set((s) => ({ generatingProposals: false, agentEvents: [...s.agentEvents, evt] }))
+              return
+            }
+            if (evt.event === 'agent_start') {
+              set((s) => ({
+                activeAgentIndex: evt.agent_index ?? s.activeAgentIndex,
+                agentRoles: evt.agents ?? s.agentRoles,
+                agentEvents: [...s.agentEvents, evt],
+              }))
+              return
+            }
+            if (evt.event === 'task_complete') {
+              set((s) => ({
+                activeAgentIndex: (evt.agent_index ?? s.activeAgentIndex) + 1,
+                agentEvents: [...s.agentEvents, evt],
+              }))
+              return
+            }
+            set((s) => ({ agentEvents: [...s.agentEvents, evt] }))
+          } catch { /* ignore parse errors */ }
+        }
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+          for (const line of lines) processLine(line)
+        }
+        if (buffer) processLine(buffer)
+        set((s) => ({ generatingProposals: s.generatingProposals ? false : s.generatingProposals }))
+      })
+      .catch(() => {
+        set({ generatingProposals: false })
+      })
+  },
+
+  clearAgentEvents: () => set({ agentEvents: [], activeAgentIndex: 0 }),
+
   fetchProposals: async () => {
     try {
       const { data } = await api.get('/trading/proposals')
@@ -288,6 +395,17 @@ export const useTradingStore = create<TradingState>((set, get) => ({
       return true
     } catch {
       return false
+    }
+  },
+
+  clearResolved: async () => {
+    try {
+      await api.delete('/trading/proposals/resolved')
+      set((s) => ({
+        proposals: s.proposals.filter((p) => p.status === 'pending' || p.status === 'approved'),
+      }))
+    } catch {
+      // silent
     }
   },
 
