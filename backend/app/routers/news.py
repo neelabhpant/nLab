@@ -15,6 +15,10 @@ class NewsArticle(BaseModel):
     published_at: int
     image_url: str
     related_coins: list[str]
+    body: str = ""
+    upvotes: int = 0
+    downvotes: int = 0
+    source_img: str = ""
 
 
 class NewsResponse(BaseModel):

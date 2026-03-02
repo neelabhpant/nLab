@@ -6,7 +6,8 @@ import { Compare } from '@/spaces/finance/pages/compare'
 import { Chat } from '@/spaces/finance/pages/chat'
 import { Settings } from '@/shared/pages/settings'
 import { AdvisorFinancial } from '@/spaces/finance/pages/advisor-financial'
-import { AdvisorPortfolio } from '@/spaces/finance/pages/advisor-portfolio'
+import { Roadmap } from '@/spaces/finance/pages/roadmap'
+import { Forecast } from '@/spaces/finance/pages/forecast'
 import { Trading } from '@/spaces/finance/pages/trading'
 import { TradingAgents } from '@/spaces/finance/pages/trading-agents'
 import { Gallery } from '@/spaces/labs/pages/gallery'
@@ -62,9 +63,10 @@ function AppRoutes() {
         <Route path="/finance/compare" element={<Navigate to="/finance/analytics" replace />} />
         <Route path="/finance/chat" element={<Chat />} />
         <Route path="/finance/advisor/financial" element={<AdvisorFinancial />} />
-        <Route path="/finance/advisor/portfolio" element={<AdvisorPortfolio />} />
+        <Route path="/finance/roadmap" element={<Roadmap />} />
         <Route path="/finance/trading" element={<Trading />} />
         <Route path="/finance/trading/agents" element={<TradingAgents />} />
+        <Route path="/finance/forecast" element={<Forecast />} />
         <Route path="/labs" element={<Gallery />} />
         <Route path="/labs/workshop" element={<Workshop />} />
         <Route path="/labs/function-to-music" element={<FunctionToMusic />} />

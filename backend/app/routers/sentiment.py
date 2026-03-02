@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.services.sentiment import compute_daily_sentiment, compute_sentiment_summary
+from app.services.sentiment_db import get_trend, has_data
 
 router = APIRouter(tags=["sentiment"])
 
@@ -66,6 +67,38 @@ async def sentiment_heatmap(
                 days=[DailyScore(**d) for d in daily_data],
             ))
         return HeatmapResponse(coins=grid)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+class TrendResponse(BaseModel):
+    """Response containing sentiment trend data from persistent storage."""
+
+    coins: list[CoinHeatmapData]
+
+
+@router.get("/sentiment/trend", response_model=TrendResponse)
+async def sentiment_trend(
+    coins: str = Query("bitcoin,ripple"),
+    days: int = Query(30, ge=7, le=90),
+) -> TrendResponse:
+    """Get historical sentiment trend from persistent storage.
+
+    If no stored data exists for a coin, triggers a backfill computation first.
+    """
+    try:
+        coin_list = [c.strip() for c in coins.split(",") if c.strip()]
+        for coin in coin_list:
+            if not has_data(coin):
+                await compute_daily_sentiment(coin, days)
+        grid = []
+        for coin in coin_list:
+            trend_data = get_trend(coin, days)
+            grid.append(CoinHeatmapData(
+                coin=coin,
+                days=[DailyScore(**d) for d in trend_data],
+            ))
+        return TrendResponse(coins=grid)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from cachetools import TTLCache
 
 from app.services.news import get_news
+from app.services.sentiment_db import upsert_many, has_data, get_trend
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,13 @@ async def compute_daily_sentiment(coin: str, days: int = 30) -> list[dict]:
             "score": round(avg, 3),
             "article_count": len(scores),
         })
+
+    rows = [
+        (coin, entry["date"], entry["score"], entry["article_count"])
+        for entry in result
+        if entry["article_count"] > 0
+    ]
+    upsert_many(rows)
 
     _heatmap_cache[cache_key] = result
     return result

@@ -4,8 +4,10 @@ import asyncio
 import json
 import logging
 import math
+import re
 import time
 from collections.abc import AsyncGenerator
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
@@ -81,6 +83,7 @@ AVAILABLE_TOOLS = {
 
 _event_queue: asyncio.Queue | None = None
 _notes_store: dict[str, str] = {}
+_search_cache: dict[str, str] = {}
 
 
 def _emit_sync(event: ExecutionEvent) -> None:
@@ -95,12 +98,40 @@ class WebSearchInput(BaseModel):
     query: str = Field(..., description="Search query to look up on the web")
 
 
+def _normalize_query(query: str) -> str:
+    """Normalize a search query: fix stale years and clean up."""
+    current_year = datetime.now().year
+    query = re.sub(r'\b(20[0-9]{2})\b', lambda m: str(current_year) if int(m.group(1)) < current_year else m.group(0), query)
+    return query.strip()
+
+
+def _query_cache_key(query: str) -> str:
+    """Create a normalized cache key from a query for deduplication."""
+    words = sorted(set(query.lower().split()))
+    return " ".join(words)
+
+
 class WebSearchTool(BaseTool):
     name: str = "web_search"
     description: str = "Search the web for current information on any topic."
     args_schema: type[BaseModel] = WebSearchInput
 
     def _run(self, query: str) -> str:
+        query = _normalize_query(query)
+        cache_key = _query_cache_key(query)
+        if cache_key in _search_cache:
+            _emit_sync(ExecutionEvent(
+                type=EventType.TOOL_CALL,
+                content=f"Searching: {query} (cached)",
+                metadata={"tool": "web_search", "input": query, "cached": True},
+            ))
+            out = _search_cache[cache_key]
+            _emit_sync(ExecutionEvent(
+                type=EventType.TOOL_RESULT,
+                content=out[:500],
+                metadata={"tool": "web_search", "cached": True},
+            ))
+            return out
         _emit_sync(ExecutionEvent(
             type=EventType.TOOL_CALL,
             content=f"Searching: {query}",
@@ -119,6 +150,7 @@ class WebSearchTool(BaseTool):
                 out = "\n\n".join(lines)
         except Exception as e:
             out = f"Search error: {e}"
+        _search_cache[cache_key] = out
         _emit_sync(ExecutionEvent(
             type=EventType.TOOL_RESULT,
             content=out[:500],
@@ -393,9 +425,10 @@ def _task_callback(task_output: Any) -> None:
 
 async def execute_crew(plan: CrewPlan) -> AsyncGenerator[ExecutionEvent, None]:
     """Execute a crew plan and yield execution events as they happen."""
-    global _event_queue, _notes_store, _current_agent_name, _agent_start_times
+    global _event_queue, _notes_store, _search_cache, _current_agent_name, _agent_start_times
     _event_queue = asyncio.Queue(maxsize=500)
     _notes_store = {}
+    _search_cache = {}
     _current_agent_name = None
     _agent_start_times = {}
 
@@ -407,13 +440,14 @@ async def execute_crew(plan: CrewPlan) -> AsyncGenerator[ExecutionEvent, None]:
 
     try:
         llm = get_llm()
+        date_context = f"Today's date is {datetime.now().strftime('%B %d, %Y')}. Always search for the most current and up-to-date information. Never use outdated year references in searches."
         crewai_agents: dict[str, Agent] = {}
         for agent_def in sorted(plan.agents, key=lambda a: a.order):
             tools = [TOOL_MAP[t]() for t in agent_def.tools if t in TOOL_MAP]
             crewai_agents[agent_def.id] = Agent(
                 role=agent_def.role,
                 goal=agent_def.goal,
-                backstory=agent_def.backstory,
+                backstory=f"{date_context} {agent_def.backstory}",
                 tools=tools,
                 llm=llm,
                 verbose=False,
@@ -549,6 +583,7 @@ async def execute_crew(plan: CrewPlan) -> AsyncGenerator[ExecutionEvent, None]:
     finally:
         _event_queue = None
         _notes_store = {}
+        _search_cache = {}
         _current_agent_name = None
         _agent_start_times = {}
 
