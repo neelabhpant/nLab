@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Send, Trash2, User, Bot, Loader2, Square } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { useOpenClawStore, type ChatMessage } from '@/spaces/labs/stores/openclaw-store'
 
 const ACCENT = '#FF6B35'
@@ -32,9 +33,15 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             : 'bg-surface-0 border border-border shadow-sm'
         }`}
       >
-        <p className="text-sm font-body leading-relaxed whitespace-pre-wrap text-slate-900">
-          {message.content}
-        </p>
+        {isUser ? (
+          <p className="text-sm font-body leading-relaxed whitespace-pre-wrap text-slate-900">
+            {message.content}
+          </p>
+        ) : (
+          <div className="prose prose-sm prose-slate max-w-none [&_p]:text-sm [&_p]:leading-relaxed [&_p]:text-slate-900 [&_li]:text-sm [&_li]:text-slate-900 [&_h1]:text-base [&_h1]:font-bold [&_h1]:text-slate-900 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:text-slate-900 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-slate-900 [&_strong]:text-slate-900 [&_a]:text-[#FF6B35] [&_code]:text-xs [&_code]:bg-surface-1 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded">
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          </div>
+        )}
       </div>
     </motion.div>
   )
