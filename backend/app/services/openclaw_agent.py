@@ -12,6 +12,7 @@ import re
 import shutil
 import smtplib
 import subprocess
+import threading
 import time
 import uuid
 from collections.abc import AsyncGenerator
@@ -215,8 +216,10 @@ _search_cache: dict[str, str] = {}
 _last_generated_file: Path | None = None
 _confirmation_events: dict[str, asyncio.Event] = {}
 _confirmation_results: dict[str, bool] = {}
-_abort_event: asyncio.Event | None = None
+_abort_event: threading.Event | None = None
 _session_id: str | None = None
+_active_browser_agent = None
+_active_browser_session = None
 
 BLOCKED_PATTERNS = [
     ".env", ".ssh", ".gnupg", ".aws", ".config/gcloud",
@@ -283,12 +286,29 @@ def abort_session(session_id: str) -> bool:
     """Signal the running session to abort."""
     if _session_id == session_id and _abort_event is not None:
         _abort_event.set()
+        if _active_browser_agent is not None:
+            try:
+                _active_browser_agent.stop()
+            except Exception:
+                pass
+        if _active_browser_session is not None:
+            try:
+                import asyncio as _aio
+                loop = _aio.new_event_loop()
+                loop.run_until_complete(_active_browser_session.close())
+                loop.close()
+            except Exception:
+                pass
         return True
     return False
 
 
 def get_current_session_id() -> str | None:
     return _session_id
+
+
+def _is_aborted() -> bool:
+    return _abort_event is not None and _abort_event.is_set()
 
 
 def _emit(event: OCEvent) -> None:
@@ -324,6 +344,8 @@ class OCWebSearchTool(BaseTool):
     args_schema: type[BaseModel] = OCWebSearchInput
 
     def _run(self, query: str) -> str:
+        if _is_aborted():
+            return "Aborted by user."
         query = _normalize_query(query)
         cache_key = _query_cache_key(query)
         if cache_key in _search_cache:
@@ -433,6 +455,8 @@ class OCUrlFetcherTool(BaseTool):
     args_schema: type[BaseModel] = OCUrlFetcherInput
 
     def _run(self, url: str) -> str:
+        if _is_aborted():
+            return "Aborted by user."
         _emit(OCEvent(
             type=OCEventType.TOOL_CALL,
             content=f"Fetching: {url}",
@@ -1186,6 +1210,8 @@ class OCBrowserAgentTool(BaseTool):
     args_schema: type[BaseModel] = OCBrowserAgentInput
 
     def _run(self, task: str = "", url: str = "", max_steps: int = 25) -> str:
+        if _is_aborted():
+            return "Aborted by user."
         _emit(OCEvent(
             type=OCEventType.TOOL_CALL,
             content=f"Browser Agent: {task[:100]}",
@@ -1222,10 +1248,12 @@ async def _run_browser_agent(task: str, url: str, max_steps: int) -> str:
         full_task = (
             "IMPORTANT RULES:\n"
             "1. You are already logged in with saved browser cookies. Do NOT log in or enter credentials.\n"
-            "2. Navigate directly to the specific page URL for the task (e.g. /messaging/ for messages). Do NOT scroll the homepage.\n"
-            "3. Extract content using extract_content action. Do NOT write files — just return the data via done action.\n"
-            "4. Be efficient — minimize unnecessary navigation and scrolling.\n"
-            "5. Once the task is done (item added to cart, message sent, data extracted, etc.), IMMEDIATELY call the done action. Do NOT repeat the same action.\n\n"
+            "2. Navigate directly to the relevant page URL for the task. Do NOT browse or scroll the homepage.\n"
+            "3. Only interact with elements directly related to the task. IGNORE ads, banners, promotional content, and unrelated navigation.\n"
+            "4. If an action fails 3 times, try an alternative approach or skip it and report what failed.\n"
+            "5. Once the task is complete, IMMEDIATELY call the done action. Do NOT repeat actions you already completed.\n"
+            "6. Return extracted data via the done action. Do NOT write files.\n"
+            "7. Be efficient — minimize unnecessary clicks, scrolling, and navigation.\n\n"
             f"Task: {full_task}"
         )
 
@@ -1238,7 +1266,14 @@ async def _run_browser_agent(task: str, url: str, max_steps: int) -> str:
 
     llm = _get_browser_use_llm()
 
+    async def on_step_start(agent_instance):
+        if _abort_event and _abort_event.is_set():
+            agent_instance.stop()
+
     async def on_step_end(agent_instance):
+        if _abort_event and _abort_event.is_set():
+            agent_instance.stop()
+            return
         state = agent_instance.state
         step_info = ""
         model_out = state.last_model_output
@@ -1263,15 +1298,18 @@ async def _run_browser_agent(task: str, url: str, max_steps: int) -> str:
                         metadata={"skill": "browser_agent", "step": "result"},
                     ))
 
+    global _active_browser_agent, _active_browser_session
+    _active_browser_session = browser_session
     agent = Agent(
         task=full_task,
         llm=llm,
         browser_session=browser_session,
         use_vision=True,
     )
+    _active_browser_agent = agent
 
     try:
-        history = await agent.run(max_steps=max_steps, on_step_end=on_step_end)
+        history = await agent.run(max_steps=max_steps, on_step_start=on_step_start, on_step_end=on_step_end)
         final = history.final_result()
         if final:
             return final
@@ -1280,6 +1318,8 @@ async def _run_browser_agent(task: str, url: str, max_steps: int) -> str:
             return "\n".join(extracted)
         return "Browser task completed but no content was extracted."
     finally:
+        _active_browser_agent = None
+        _active_browser_session = None
         try:
             await agent.close()
         except Exception:
@@ -1438,7 +1478,7 @@ async def stream_chat(request: ChatRequest) -> AsyncGenerator[str, None]:
     _main_loop = asyncio.get_running_loop()
     _notes_store = {}
     _search_cache = {}
-    _abort_event = asyncio.Event()
+    _abort_event = threading.Event()
     _session_id = str(uuid.uuid4())[:8]
 
     if request.memory:
@@ -1574,6 +1614,8 @@ async def stream_chat(request: ChatRequest) -> AsyncGenerator[str, None]:
         _event_queue = None
         _abort_event = None
         _session_id = None
+        _active_browser_agent = None
+        _active_browser_session = None
         _notes_store = {}
         _search_cache = {}
         _confirmation_events.clear()
