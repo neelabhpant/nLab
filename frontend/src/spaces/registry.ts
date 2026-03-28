@@ -1,4 +1,4 @@
-import { TrendingUp, FlaskConical } from 'lucide-react'
+import { TrendingUp, FlaskConical, ShoppingBag } from 'lucide-react'
 import type { ComponentType } from 'react'
 
 export type IconComponent = ComponentType<{ className?: string; strokeWidth?: number }>
@@ -30,6 +30,12 @@ export const SPACES: SpaceDefinition[] = [
     name: 'Finance',
     icon: TrendingUp,
     basePath: '/finance',
+  },
+  {
+    id: 'retail',
+    name: 'Retail',
+    icon: ShoppingBag,
+    basePath: '/retail',
   },
   {
     id: 'labs',

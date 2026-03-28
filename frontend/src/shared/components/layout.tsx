@@ -11,10 +11,12 @@ import { ChatWidget } from './chat-widget'
 import { SPACES } from '@/spaces/registry'
 import type { NavGroup } from '@/spaces/registry'
 import { FINANCE_NAV_GROUPS } from '@/spaces/finance/nav'
+import { RETAIL_NAV_GROUPS } from '@/spaces/retail/nav'
 import { LABS_NAV_GROUPS } from '@/spaces/labs/nav'
 
 const SPACE_NAV: Record<string, NavGroup[]> = {
   finance: FINANCE_NAV_GROUPS,
+  retail: RETAIL_NAV_GROUPS,
   labs: LABS_NAV_GROUPS,
 }
 

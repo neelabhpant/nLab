@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""
     alpaca_base_url: str = "https://paper-api.alpaca.markets/v2"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    local_allowed_paths: str = ""
+    local_shell_allowlist: str = "ls,cat,head,tail,wc,grep,find,du,df,ps,git,python,node,npm,pip,echo,date,which,file,stat"
+    browser_profile_dir: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

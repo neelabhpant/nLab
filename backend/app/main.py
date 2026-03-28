@@ -5,12 +5,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop, forecast
+from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop, forecast, retail, openclaw
 from app.routers import settings as settings_router
 from app.services.auth import verify_token
 from app.services.vault_storage import VaultStorage
 from app.services.vault_memory import VaultMemory
 from app.routers.vault import init_vault
+from app.routers.retail import init_retail_memory
+from app.services.retail_memory import RetailMemory
+from app.services.retail_scheduler import start_scheduler as start_retail_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +73,8 @@ app.include_router(trading.router, prefix="/api/v1")
 app.include_router(trading_agents.router, prefix="/api/v1")
 app.include_router(workshop.router, prefix="/api/v1")
 app.include_router(forecast.router, prefix="/api/v1")
+app.include_router(retail.router, prefix="/api/v1")
+app.include_router(openclaw.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
@@ -86,6 +91,17 @@ async def startup_vault() -> None:
         memory = None
     init_vault(storage, memory)
     logger.info("Vault initialized")
+
+    try:
+        retail_memory = RetailMemory()
+        if not retail_memory.available:
+            retail_memory = None
+    except Exception:
+        logger.warning("Retail memory unavailable")
+        retail_memory = None
+    init_retail_memory(retail_memory)
+    start_retail_scheduler()
+    logger.info("Retail intelligence initialized")
 
 
 @app.get("/api/v1/health")

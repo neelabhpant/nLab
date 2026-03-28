@@ -10,8 +10,14 @@ import { Roadmap } from '@/spaces/finance/pages/roadmap'
 import { Forecast } from '@/spaces/finance/pages/forecast'
 import { Trading } from '@/spaces/finance/pages/trading'
 import { TradingAgents } from '@/spaces/finance/pages/trading-agents'
+import { RetailDashboard } from '@/spaces/retail/pages/retail-dashboard'
+import { RetailArticles } from '@/spaces/retail/pages/retail-articles'
+import { RetailSparks } from '@/spaces/retail/pages/retail-sparks'
+import { RetailChat } from '@/spaces/retail/pages/retail-chat'
+import { RetailSources } from '@/spaces/retail/pages/retail-sources'
 import { Gallery } from '@/spaces/labs/pages/gallery'
 import { Workshop } from '@/spaces/labs/pages/workshop'
+import { OpenClaw } from '@/spaces/labs/pages/openclaw'
 import { FunctionToMusic } from '@/spaces/labs/pages/function-to-music'
 import { ProjectDetail } from '@/spaces/labs/pages/project-detail'
 import { Vault } from '@/shared/pages/vault'
@@ -67,8 +73,14 @@ function AppRoutes() {
         <Route path="/finance/trading" element={<Trading />} />
         <Route path="/finance/trading/agents" element={<TradingAgents />} />
         <Route path="/finance/forecast" element={<Forecast />} />
+        <Route path="/retail" element={<RetailDashboard />} />
+        <Route path="/retail/articles" element={<RetailArticles />} />
+        <Route path="/retail/sparks" element={<RetailSparks />} />
+        <Route path="/retail/chat" element={<RetailChat />} />
+        <Route path="/retail/sources" element={<RetailSources />} />
         <Route path="/labs" element={<Gallery />} />
         <Route path="/labs/workshop" element={<Workshop />} />
+        <Route path="/labs/openclaw" element={<OpenClaw />} />
         <Route path="/labs/function-to-music" element={<FunctionToMusic />} />
         <Route path="/labs/:projectId" element={<ProjectDetail />} />
         <Route path="/vault" element={<Vault />} />
