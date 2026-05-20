@@ -5,16 +5,24 @@ import { Dashboard } from '@/spaces/finance/pages/dashboard'
 import { Compare } from '@/spaces/finance/pages/compare'
 import { Chat } from '@/spaces/finance/pages/chat'
 import { Settings } from '@/shared/pages/settings'
+import { RetailSources as Sources } from '@/shared/pages/sources'
 import { AdvisorFinancial } from '@/spaces/finance/pages/advisor-financial'
 import { Roadmap } from '@/spaces/finance/pages/roadmap'
 import { Forecast } from '@/spaces/finance/pages/forecast'
 import { Trading } from '@/spaces/finance/pages/trading'
 import { TradingAgents } from '@/spaces/finance/pages/trading-agents'
-import { RetailDashboard } from '@/spaces/retail/pages/retail-dashboard'
-import { RetailArticles } from '@/spaces/retail/pages/retail-articles'
+import { RetailDashboard } from '@/spaces/retail/research/daily-digest'
+import { RetailArticles } from '@/spaces/retail/research/article-feed'
 import { RetailSparks } from '@/spaces/retail/pages/retail-sparks'
-import { RetailChat } from '@/spaces/retail/pages/retail-chat'
-import { RetailSources } from '@/spaces/retail/pages/retail-sources'
+import { RetailChat } from '@/spaces/retail/chat/retail-chat'
+import { ComposePage } from '@/spaces/retail/compose/compose-page'
+import { DraftsPage } from '@/spaces/retail/compose/drafts-page'
+import { ArchivePage } from '@/spaces/retail/compose/archive-page'
+import { POVLibraryPage } from '@/spaces/retail/library/pov-library'
+import { POVDetailPage } from '@/spaces/retail/library/pov-detail'
+import { POVEditorPage } from '@/spaces/retail/library/pov-editor'
+import { VoiceExamplesPage } from '@/spaces/retail/library/voice-examples'
+import { DistributionListsPage } from '@/spaces/retail/library/distribution-lists'
 import { Gallery } from '@/spaces/labs/pages/gallery'
 import { Workshop } from '@/spaces/labs/pages/workshop'
 import { OpenClaw } from '@/spaces/labs/pages/openclaw'
@@ -73,11 +81,28 @@ function AppRoutes() {
         <Route path="/finance/trading" element={<Trading />} />
         <Route path="/finance/trading/agents" element={<TradingAgents />} />
         <Route path="/finance/forecast" element={<Forecast />} />
-        <Route path="/retail" element={<RetailDashboard />} />
-        <Route path="/retail/articles" element={<RetailArticles />} />
-        <Route path="/retail/sparks" element={<RetailSparks />} />
+
+        {/* Retail — new structure */}
+        <Route path="/retail" element={<Navigate to="/retail/research/digest" replace />} />
+        <Route path="/retail/compose" element={<ComposePage />} />
+        <Route path="/retail/compose/drafts" element={<DraftsPage />} />
+        <Route path="/retail/compose/archive" element={<ArchivePage />} />
+        <Route path="/retail/research/digest" element={<RetailDashboard />} />
+        <Route path="/retail/research/articles" element={<RetailArticles />} />
+        <Route path="/retail/library" element={<Navigate to="/retail/library/povs" replace />} />
+        <Route path="/retail/library/povs" element={<POVLibraryPage />} />
+        <Route path="/retail/library/povs/new" element={<POVEditorPage />} />
+        <Route path="/retail/library/povs/:povId" element={<POVDetailPage />} />
+        <Route path="/retail/library/povs/:povId/edit" element={<POVEditorPage />} />
+        <Route path="/retail/library/voice" element={<VoiceExamplesPage />} />
+        <Route path="/retail/library/distribution" element={<DistributionListsPage />} />
         <Route path="/retail/chat" element={<RetailChat />} />
-        <Route path="/retail/sources" element={<RetailSources />} />
+
+        {/* Retail — legacy URLs (preserve bookmarks) */}
+        <Route path="/retail/articles" element={<Navigate to="/retail/research/articles" replace />} />
+        <Route path="/retail/sources" element={<Navigate to="/settings/sources" replace />} />
+        <Route path="/retail/sparks" element={<RetailSparks />} />
+
         <Route path="/labs" element={<Gallery />} />
         <Route path="/labs/workshop" element={<Workshop />} />
         <Route path="/labs/openclaw" element={<OpenClaw />} />
@@ -85,6 +110,7 @@ function AppRoutes() {
         <Route path="/labs/:projectId" element={<ProjectDetail />} />
         <Route path="/vault" element={<Vault />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/sources" element={<Sources />} />
       </Route>
     </Routes>
   )

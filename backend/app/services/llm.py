@@ -15,10 +15,9 @@ SETTINGS_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "user_s
 PROVIDER_MODELS: dict[str, list[str]] = {
     "openai": ["gpt-5.2", "gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
     "anthropic": [
-        "claude-sonnet-4-6",
+        "claude-opus-4-7",
         "claude-opus-4-6",
-        "claude-sonnet-4-5",
-        "claude-opus-4-5",
+        "claude-sonnet-4-6",
         "claude-haiku-4-5",
     ],
     "groq": [

@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-6"
+    anthropic_model: str = "claude-opus-4-7"
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
     default_llm_provider: str = "openai"
@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     local_allowed_paths: str = ""
     local_shell_allowlist: str = "ls,cat,head,tail,wc,grep,find,du,df,ps,git,python,node,npm,pip,echo,date,which,file,stat"
     browser_profile_dir: str = ""
+
+    # Newsletter Composer ("The Retail Read") — flag-gated build, see NEWSLETTER_COMPOSER_SPEC.md.
+    # When False, Phase 4+ composer endpoints and UI surfaces stay dormant.
+    newsletter_feature_enabled: bool = True
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

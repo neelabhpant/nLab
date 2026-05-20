@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Save, Check, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Save, Check, AlertCircle, Eye, EyeOff, Rss, ChevronRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { TopHeader } from '@/shared/components/top-header'
 import { useLayoutContext } from '@/shared/components/layout'
 import { api } from '@/shared/lib/api'
@@ -26,7 +27,7 @@ export function Settings() {
 
   const [provider, setProvider] = useState('openai')
   const [openaiModel, setOpenaiModel] = useState('gpt-4o')
-  const [anthropicModel, setAnthropicModel] = useState('claude-sonnet-4-20250514')
+  const [anthropicModel, setAnthropicModel] = useState('claude-opus-4-7')
   const [groqModel, setGroqModel] = useState('llama-3.3-70b-versatile')
   const [openaiKey, setOpenaiKey] = useState('')
   const [anthropicKey, setAnthropicKey] = useState('')
@@ -171,6 +172,9 @@ export function Settings() {
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
+                  <p className="mt-1.5 text-xs font-body text-slate-500">
+                    Opus 4.7 is recommended for content generation tasks (newsletter, voice-tuned writing). Haiku is fine for tagging and utility tasks.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-body text-slate-600 mb-1.5">Groq Model</label>
@@ -271,6 +275,28 @@ export function Settings() {
                   </div>
                 </div>
               </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.15 }}
+            >
+              <Link
+                to="/settings/sources"
+                className="flex items-center justify-between rounded-xl border border-border bg-surface-0 p-5 shadow-sm hover:border-cyan/40 hover:shadow-md transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-cyan/10 text-cyan">
+                    <Rss className="w-5 h-5" strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-display font-semibold text-slate-900">Data Sources</h3>
+                    <p className="text-xs font-body text-slate-500 mt-0.5">RSS feeds powering the Retail research surface</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-cyan transition-colors" />
+              </Link>
             </motion.div>
 
             {error && (

@@ -96,6 +96,7 @@ Create `backend/.env` with:
 | `OPENAI_API_KEY` | OpenAI API key |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `GROQ_API_KEY` | Groq API key |
+| `DEFAULT_LLM_PROVIDER` | `openai`, `anthropic`, or `groq` (default: `openai`) |
 | `FRED_API_KEY` | FRED economic data API key |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
@@ -123,6 +124,16 @@ cd frontend && npm run dev
 # Terminal 2 - Backend (port 8000)
 cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
 ```
+
+### Docker
+
+Alternatively, run the full stack with Docker:
+
+```bash
+docker compose up
+```
+
+This starts the backend on port 8000 (with a persistent `backend-data` volume) and the frontend on port 3000.
 
 ## Architecture
 

@@ -5,11 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop, forecast, retail, openclaw
+from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop, forecast, retail, openclaw, pov_library
 from app.routers import settings as settings_router
 from app.services.auth import verify_token
+from app.services.pov_library import pov_library_service
 from app.services.vault_storage import VaultStorage
 from app.services.vault_memory import VaultMemory
+from app.routers.pov_library import SEED_PATH as POV_SEED_PATH
 from app.routers.vault import init_vault
 from app.routers.retail import init_retail_memory
 from app.services.retail_memory import RetailMemory
@@ -75,6 +77,7 @@ app.include_router(workshop.router, prefix="/api/v1")
 app.include_router(forecast.router, prefix="/api/v1")
 app.include_router(retail.router, prefix="/api/v1")
 app.include_router(openclaw.router, prefix="/api/v1")
+app.include_router(pov_library.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
@@ -102,6 +105,17 @@ async def startup_vault() -> None:
     init_retail_memory(retail_memory)
     start_retail_scheduler()
     logger.info("Retail intelligence initialized")
+
+    # Newsletter Composer — POV Library seed loader (idempotent).
+    try:
+        existing = await pov_library_service.list_povs()
+        if not existing:
+            loaded = await pov_library_service.seed_from_file(POV_SEED_PATH)
+            logger.info("Seeding POV library from %s: %d POVs loaded", POV_SEED_PATH.name, loaded)
+        else:
+            logger.info("POV library has %d entries, skipping seed.", len(existing))
+    except Exception as exc:  # noqa: BLE001 — startup must not crash on a seeding hiccup
+        logger.warning("POV library seed step failed: %s", exc)
 
 
 @app.get("/api/v1/health")

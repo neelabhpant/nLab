@@ -6,7 +6,7 @@ import {
   XCircle,
   Clock,
 } from 'lucide-react'
-import { useRetailStore } from '../stores/retail-store'
+import { useRetailStore } from '@/spaces/retail/stores/retail-store'
 import { useLayoutContext } from '@/shared/components/layout'
 import { TopHeader } from '@/shared/components/top-header'
 
