@@ -76,6 +76,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 playwright install chromium
 cp .env.example .env  # fill in your API keys
+# Optional: drop pov_library_seed.json into backend/data/seed/ before first run to auto-seed the POV Library (file is gitignored — request from owner).
 uvicorn app.main:app --reload --port 8000
 ```
 
