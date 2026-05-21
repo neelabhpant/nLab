@@ -18,6 +18,7 @@ import { RetailChat } from '@/spaces/retail/chat/retail-chat'
 import { ComposePage } from '@/spaces/retail/compose/compose-page'
 import { DraftsPage } from '@/spaces/retail/compose/drafts-page'
 import { ArchivePage } from '@/spaces/retail/compose/archive-page'
+import { IssueView } from '@/spaces/retail/compose/issue-view'
 import { POVLibraryPage } from '@/spaces/retail/library/pov-library'
 import { POVDetailPage } from '@/spaces/retail/library/pov-detail'
 import { POVEditorPage } from '@/spaces/retail/library/pov-editor'
@@ -84,9 +85,12 @@ function AppRoutes() {
 
         {/* Retail — new structure */}
         <Route path="/retail" element={<Navigate to="/retail/research/digest" replace />} />
-        <Route path="/retail/compose" element={<ComposePage />} />
+        <Route path="/retail/compose" element={<Navigate to="/retail/compose/drafts" replace />} />
         <Route path="/retail/compose/drafts" element={<DraftsPage />} />
         <Route path="/retail/compose/archive" element={<ArchivePage />} />
+        <Route path="/retail/compose/new" element={<ComposePage />} />
+        <Route path="/retail/compose/draft/:draftId" element={<ComposePage />} />
+        <Route path="/retail/compose/issues/:issueId" element={<IssueView />} />
         <Route path="/retail/research/digest" element={<RetailDashboard />} />
         <Route path="/retail/research/articles" element={<RetailArticles />} />
         <Route path="/retail/library" element={<Navigate to="/retail/library/povs" replace />} />

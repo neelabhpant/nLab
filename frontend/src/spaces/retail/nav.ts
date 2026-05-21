@@ -20,7 +20,7 @@ export const RETAIL_NAV_GROUPS: NavGroup[] = [
     label: 'Compose',
     icon: PenSquare,
     items: [
-      { to: '/retail/compose', label: 'New Issue', icon: FilePlus2 },
+      { to: '/retail/compose/new', label: 'New Issue', icon: FilePlus2 },
       { to: '/retail/compose/drafts', label: 'Drafts', icon: FileEdit },
       { to: '/retail/compose/archive', label: 'Archive', icon: Archive },
     ],

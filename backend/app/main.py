@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop, forecast, retail, openclaw, pov_library
+from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth, vault, trading, trading_agents, workshop, forecast, retail, openclaw, pov_library, newsletter
 from app.routers import settings as settings_router
 from app.services.auth import verify_token
 from app.services.pov_library import pov_library_service
@@ -78,6 +78,7 @@ app.include_router(forecast.router, prefix="/api/v1")
 app.include_router(retail.router, prefix="/api/v1")
 app.include_router(openclaw.router, prefix="/api/v1")
 app.include_router(pov_library.router, prefix="/api/v1")
+app.include_router(newsletter.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
