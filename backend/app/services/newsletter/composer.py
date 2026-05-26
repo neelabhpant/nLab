@@ -50,22 +50,24 @@ def _new_issue_id() -> str:
     return f"issue-{uuid.uuid4().hex[:12]}"
 
 
-def _bundle_content(sections: IssueSections, footer_cta: str) -> dict:
+def _bundle_content(sections: IssueSections, footer_cta: str, title: Optional[str] = None) -> dict:
     """Bundle the section payload into the `content_json` blob shape."""
     return {
         "sections": sections.model_dump(),
         "footer_cta": footer_cta,
+        "title": title,
     }
 
 
-def _unbundle_content(content: object) -> tuple[IssueSections, str]:
+def _unbundle_content(content: object) -> tuple[IssueSections, str, Optional[str]]:
     """Reverse of _bundle_content. Tolerant of missing/legacy fields."""
     if not isinstance(content, dict):
-        return IssueSections(), ""
+        return IssueSections(), "", None
     sections_data = content.get("sections") or {}
     sections = IssueSections(**sections_data) if isinstance(sections_data, dict) else IssueSections()
     footer = content.get("footer_cta") or ""
-    return sections, footer
+    title = content.get("title")
+    return sections, footer, title
 
 
 def _draft_to_row(draft: IssueDraft) -> dict:
@@ -73,7 +75,7 @@ def _draft_to_row(draft: IssueDraft) -> dict:
         "id": draft.id,
         "issue_number": draft.issue_number,
         "status": draft.status,
-        "content_json": _bundle_content(draft.sections, draft.footer_cta),
+        "content_json": _bundle_content(draft.sections, draft.footer_cta, draft.title),
         "created_at": draft.created_at,
         "updated_at": draft.updated_at,
         "sent_at": draft.sent_at,
@@ -81,10 +83,11 @@ def _draft_to_row(draft: IssueDraft) -> dict:
 
 
 def _draft_from_row(row: dict) -> IssueDraft:
-    sections, footer = _unbundle_content(row.get("content_json"))
+    sections, footer, title = _unbundle_content(row.get("content_json"))
     return IssueDraft(
         id=row["id"],
         issue_number=row.get("issue_number"),
+        title=title,
         status=row.get("status") or "draft",
         sections=sections,
         footer_cta=footer,
@@ -109,7 +112,7 @@ def _issue_to_row(issue: SentIssue) -> dict:
 
 
 def _issue_from_row(row: dict) -> SentIssue:
-    sections, footer = _unbundle_content(row.get("content_json"))
+    sections, footer, _title = _unbundle_content(row.get("content_json"))
     return SentIssue(
         id=row["id"],
         issue_number=row["issue_number"],
@@ -138,6 +141,7 @@ class ComposerService:
             id=_new_id(),
             status="draft",
             issue_number=data.issue_number,
+            title=data.title,
             sections=data.sections,
             footer_cta=data.footer_cta,
             created_at=now,
@@ -175,6 +179,9 @@ class ComposerService:
             existing.sections = IssueSections(**sections) if isinstance(sections, dict) else sections
         if "footer_cta" in patch:
             existing.footer_cta = patch["footer_cta"] or ""
+        if "title" in patch:
+            # Empty string clears the explicit title (falls back to derived).
+            existing.title = (patch["title"] or "").strip() or None
         existing.updated_at = _now_iso()
         storage = get_storage()
         await storage.put(DRAFTS_TABLE, draft_id, _draft_to_row(existing))
@@ -203,7 +210,7 @@ class ComposerService:
         issue_number = draft.issue_number or await self._next_issue_number()
         slug = f"issue-{issue_number:03d}"
         sent_at = _now_iso()
-        title = self._derive_title(draft.sections)
+        title = (draft.title or "").strip() or self._derive_title(draft.sections)
 
         issue = SentIssue(
             id=_new_issue_id(),
@@ -256,7 +263,7 @@ class ComposerService:
             id=draft.id,
             issue_number=issue_number,
             slug=f"issue-{issue_number:03d}",
-            title=self._derive_title(draft.sections),
+            title=(draft.title or "").strip() or self._derive_title(draft.sections),
             sections=draft.sections,
             footer_cta=draft.footer_cta,
             pdf_path=None,
@@ -264,33 +271,51 @@ class ComposerService:
             sent_at=_now_iso(),
             recipient_count=None,
         )
-        return build_email_html(preview)
+        image, mime = await self._resolve_spotlight_image(draft.sections)
+        return build_email_html(preview, spotlight_image=image, spotlight_image_mime=mime)
+
+    async def _resolve_spotlight_image(
+        self, sections: IssueSections
+    ) -> tuple[Optional[bytes], str]:
+        """Load the selected POV's screenshot bytes + MIME, if any. Best-effort."""
+        pov_id = sections.use_case_spotlight.pov_id
+        if not pov_id:
+            return None, "image/png"
+        from app.services.pov_library import pov_library_service
+
+        try:
+            pov = await pov_library_service.get_pov(pov_id)
+            if pov and pov.demo_screenshot_path:
+                data = await get_storage().get_file(pov.demo_screenshot_path)
+                ext = pov.demo_screenshot_path.rsplit(".", 1)[-1].lower()
+                mime = {
+                    "png": "image/png",
+                    "jpg": "image/jpeg",
+                    "jpeg": "image/jpeg",
+                    "webp": "image/webp",
+                    "gif": "image/gif",
+                }.get(ext, "image/png")
+                return data, mime
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Spotlight image unavailable: %s", exc)
+        return None, "image/png"
 
     async def _generate_exports(self, issue: SentIssue) -> tuple[str, str]:
         """Build the PDF + email HTML, persist them, return their storage paths."""
         # Imported lazily to keep module import order simple and side-effect free.
         from app.services.newsletter.exports import build_email_html, build_pdf
-        from app.services.pov_library import pov_library_service
 
-        # Resolve an inline spotlight image if the picked POV has one.
-        spotlight_image: Optional[bytes] = None
-        pov_id = issue.sections.use_case_spotlight.pov_id
-        if pov_id:
-            try:
-                pov = await pov_library_service.get_pov(pov_id)
-                if pov and pov.demo_screenshot_path:
-                    spotlight_image = await get_storage().get_file(pov.demo_screenshot_path)
-            except Exception as exc:  # noqa: BLE001
-                logger.info("Spotlight image unavailable for %s: %s", issue.slug, exc)
+        spotlight_image, mime = await self._resolve_spotlight_image(issue.sections)
 
         month = issue.sent_at[:7] if len(issue.sent_at) >= 7 else "unknown"
         base = f"issues/{month}/{issue.slug}"
         pdf_rel = f"{base}/{issue.slug}.pdf"
         html_rel = f"{base}/{issue.slug}.html"
 
+        html = build_email_html(issue, spotlight_image=spotlight_image, spotlight_image_mime=mime)
         storage = get_storage()
         await storage.store_file(pdf_rel, build_pdf(issue, spotlight_image))
-        await storage.store_file(html_rel, build_email_html(issue).encode("utf-8"))
+        await storage.store_file(html_rel, html.encode("utf-8"))
         return pdf_rel, html_rel
 
     async def _harvest_voice_examples(self, issue: SentIssue) -> None:

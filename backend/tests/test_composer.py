@@ -182,3 +182,49 @@ def test_derive_title(the_read: str, expected: str) -> None:
     service = ComposerService()
     sections = IssueSections(the_read=TheReadSection(content=the_read))
     assert service._derive_title(sections) == expected
+
+
+# ---------- Editable title ----------
+
+
+@pytest.mark.asyncio
+async def test_title_persists_and_clears(service: ComposerService) -> None:
+    created = await service.create_draft(IssueDraftCreate(sections=_filled_sections()))
+    assert created.title is None
+
+    updated = await service.update_draft(created.id, IssueDraftUpdate(title="The AI cost crisis hits retail next"))
+    assert updated is not None and updated.title == "The AI cost crisis hits retail next"
+    # Survives a round-trip through storage.
+    reloaded = await service.get_draft(created.id)
+    assert reloaded.title == "The AI cost crisis hits retail next"
+
+    # Empty string clears back to None (falls back to derived downstream).
+    cleared = await service.update_draft(created.id, IssueDraftUpdate(title="  "))
+    assert cleared.title is None
+
+
+@pytest.mark.asyncio
+async def test_mark_sent_prefers_explicit_title(service: ComposerService) -> None:
+    draft = await service.create_draft(
+        IssueDraftCreate(sections=_filled_sections("Derived would come from this sentence."))
+    )
+    await service.update_draft(draft.id, IssueDraftUpdate(title="Explicit headline"))
+    issue = await service.mark_sent(draft.id)
+    assert issue.title == "Explicit headline"
+
+
+@pytest.mark.asyncio
+async def test_mark_sent_falls_back_to_derived_title(service: ComposerService) -> None:
+    draft = await service.create_draft(
+        IssueDraftCreate(sections=_filled_sections("Agentic AI demands clean data."))
+    )
+    issue = await service.mark_sent(draft.id)
+    assert issue.title == "Agentic AI demands clean data"
+
+
+def test_slugify_title() -> None:
+    from app.services.newsletter.exports import slugify
+
+    assert slugify("The AI cost crisis hits retail next.") == "the-ai-cost-crisis-hits-retail-next"
+    assert slugify("  Multiple   spaces & symbols!! ") == "multiple-spaces-symbols"
+    assert slugify("", fallback="issue-001") == "issue-001"

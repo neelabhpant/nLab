@@ -50,6 +50,7 @@ export interface IssueSections {
 export interface IssueDraft {
   id: string
   issue_number: number | null
+  title: string | null
   status: 'draft' | 'sent'
   sections: IssueSections
   footer_cta: string
@@ -86,7 +87,7 @@ export const EMPTY_SECTIONS: IssueSections = {
   horizon: { items: ['', '', ''] },
 }
 
-type DraftPatch = Partial<Pick<IssueDraft, 'sections' | 'footer_cta'>>
+type DraftPatch = Partial<Pick<IssueDraft, 'sections' | 'footer_cta' | 'title'>>
 
 export type GenerationParams =
   | { kind: 'the_read'; userInput: string }
@@ -227,6 +228,7 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
     set({ saving: true, error: null })
     try {
       const { data } = await api.put<IssueDraft>(`/newsletter/drafts/${current.id}`, {
+        title: current.title,
         sections: current.sections,
         footer_cta: current.footer_cta,
       })

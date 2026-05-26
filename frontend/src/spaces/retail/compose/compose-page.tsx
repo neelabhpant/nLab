@@ -121,7 +121,8 @@ export function ComposePage() {
     return () => clearInterval(interval)
   }, [])
 
-  const title = useMemo(() => deriveTitle(currentDraft), [currentDraft])
+  const derivedTitle = useMemo(() => deriveTitle(currentDraft), [currentDraft])
+  const title = (currentDraft?.title || '').trim() || derivedTitle
   const issueLabel = currentDraft?.issue_number
     ? `Issue ${currentDraft.issue_number} (pending)`
     : 'Unsent'
@@ -174,6 +175,25 @@ export function ComposePage() {
             <ArrowLeft className="w-4 h-4" />
             Back to drafts
           </Link>
+
+          {/* Issue title — editorial headline + email subject. Defaults to the
+              derived value (shown as placeholder); persists via auto-save. */}
+          <div className="mb-4">
+            <label className="block text-[10px] font-display font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              Issue title
+            </label>
+            <input
+              type="text"
+              value={currentDraft?.title ?? ''}
+              onChange={(e) => updateCurrentDraft({ title: e.target.value })}
+              placeholder={derivedTitle}
+              disabled={!currentDraft}
+              className="w-full bg-transparent border-0 border-b border-border focus:border-emerald-500 px-0 py-1.5 text-2xl font-display font-bold text-slate-900 placeholder:text-slate-300 placeholder:font-bold focus:outline-none focus:ring-0"
+            />
+            <p className="mt-1 text-[11px] font-body text-slate-400">
+              Doubles as the email subject. Leave blank to use the auto-generated headline.
+            </p>
+          </div>
 
           {/* Top bar: title pill + actions */}
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-5">

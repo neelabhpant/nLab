@@ -108,7 +108,7 @@ export function DraftsPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-display font-semibold text-slate-900 truncate">
-                        {deriveTitle(d)}
+                        {(d.title || '').trim() || deriveTitle(d)}
                       </p>
                       <p className="text-xs font-body text-slate-500 mt-0.5">
                         {d.issue_number ? `Issue ${d.issue_number} (pending)` : 'Unsent'} · last updated {timeAgo(d.updated_at)}

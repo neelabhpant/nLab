@@ -26,7 +26,7 @@ from app.models.voice import (
     VoiceExampleUpdate,
 )
 from app.services.newsletter.composer import composer_service
-from app.services.newsletter.exports import build_slack_text
+from app.services.newsletter.exports import build_slack_text, slugify
 from app.services.newsletter.generation import (
     AnthropicNotConfigured,
     GenerationTimeout,
@@ -181,7 +181,8 @@ async def download_issue_pdf(issue_id: str) -> FileResponse:
     issue = await composer_service.get_issue(issue_id)
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found")
-    return await _serve_stored_file(issue.pdf_path, "application/pdf", f"{issue.slug}.pdf")
+    name = slugify(issue.title, fallback=issue.slug)
+    return await _serve_stored_file(issue.pdf_path, "application/pdf", f"{name}.pdf")
 
 
 @router.get("/issues/{issue_id}/html")
@@ -189,7 +190,8 @@ async def download_issue_html(issue_id: str) -> FileResponse:
     issue = await composer_service.get_issue(issue_id)
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found")
-    return await _serve_stored_file(issue.html_path, "text/html", f"{issue.slug}.html")
+    name = slugify(issue.title, fallback=issue.slug)
+    return await _serve_stored_file(issue.html_path, "text/html", f"{name}.html")
 
 
 @router.get("/issues/{issue_id}/slack", response_model=GenerationResponse)

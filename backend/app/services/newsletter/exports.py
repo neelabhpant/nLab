@@ -12,13 +12,25 @@ so this module has no coupling to that file's private helpers.
 
 from __future__ import annotations
 
+import base64
 import html as html_lib
+import re
 from datetime import datetime
 from typing import Optional
 
 import fitz
 
 from app.models.newsletter import IssueSections, SentIssue
+
+# Cloudera brand font. Email clients that strip the web-font <link> fall back
+# to the system sans-serif stack; the composer preview (browser) loads it.
+EMAIL_FONT_STACK = (
+    "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+)
+GOOGLE_FONTS_LINK = (
+    '<link href="https://fonts.googleapis.com/css2?'
+    'family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">'
+)
 
 # ---------- Branding ----------
 
@@ -46,6 +58,12 @@ SECTION_TITLES: list[tuple[str, str]] = [
     ("wins", "Wins & References"),
     ("horizon", "On the Horizon"),
 ]
+
+
+def slugify(text: str, fallback: str = "issue") -> str:
+    """Filename-safe slug from a title. e.g. 'The AI cost crisis.' -> 'the-ai-cost-crisis'."""
+    s = re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
+    return s or fallback
 
 
 def _format_date(iso: str) -> str:
@@ -112,26 +130,39 @@ def build_pdf(issue: SentIssue, spotlight_image: Optional[bytes] = None) -> byte
             return page, MARGIN + 6
         return page, y
 
-    # --- Header band ---
-    header_h = 86
+    # --- Header band (Option A: wordmark / editorial headline / meta) ---
+    title_lines = _wrap(issue.title or "", bold_font, 15, CONTENT_W)[:2]
+    wordmark_y = 34
+    title_y0 = 58
+    title_leading = 19
+    meta_y = title_y0 + (len(title_lines) - 1) * title_leading + 26
+    header_h = meta_y + 16
+
     page.draw_rect(fitz.Rect(0, 0, PAGE_W, header_h), color=None, fill=_rgb(DEEP_NAVY))
     page.draw_rect(fitz.Rect(0, header_h - 5, PAGE_W, header_h), color=None, fill=_rgb(CLOUDERA_ORANGE))
+    # Tier 1 — brand wordmark.
     page.insert_text(
-        fitz.Point(MARGIN, 40),
+        fitz.Point(MARGIN, wordmark_y),
         "THE RETAIL READ",
         fontname=bold_font,
-        fontsize=22,
+        fontsize=18,
         color=_rgb(WHITE),
     )
+    # Tier 2 — editorial headline (the issue title).
+    ty = title_y0
+    for line in title_lines:
+        page.insert_text(fitz.Point(MARGIN, ty), line, fontname=bold_font, fontsize=15, color=_rgb(WHITE))
+        ty += title_leading
+    # Tier 3 — issue + date meta.
     page.insert_text(
-        fitz.Point(MARGIN, 62),
+        fitz.Point(MARGIN, meta_y),
         f"Issue {issue.issue_number:03d}  ·  {_format_date(issue.sent_at)}",
         fontname=body_font,
-        fontsize=11,
+        fontsize=10,
         color=_rgb(SLATE_300),
     )
 
-    y = header_h + 28
+    y = header_h + 26
 
     def section_header(title: str, yy: float) -> float:
         page.draw_rect(fitz.Rect(MARGIN, yy - 10, MARGIN + 4, yy + 4), color=None, fill=_rgb(CLOUDERA_ORANGE))
@@ -243,8 +274,17 @@ def _esc(text: str) -> str:
     return html_lib.escape(text or "").replace("\n", "<br>")
 
 
-def build_email_html(issue: SentIssue) -> str:
-    """Single-column, inline-CSS HTML suitable for pasting into Outlook/Gmail."""
+def build_email_html(
+    issue: SentIssue,
+    spotlight_image: Optional[bytes] = None,
+    spotlight_image_mime: str = "image/png",
+) -> str:
+    """Single-column, inline-CSS HTML suitable for pasting into Outlook/Gmail.
+
+    If a spotlight image is supplied it is base64-embedded after the spotlight
+    prose (self-contained — no auth or host dependency, renders in the preview
+    iframe and survives a paste into a compose window).
+    """
     s = issue.sections
     date = _format_date(issue.sent_at)
 
@@ -281,6 +321,15 @@ def build_email_html(issue: SentIssue) -> str:
             f'{html_lib.escape(s.use_case_spotlight.tailored_for_account)}</div>'
         )
 
+    spotlight_img = ""
+    if spotlight_image:
+        b64 = base64.b64encode(spotlight_image).decode("ascii")
+        spotlight_img = (
+            f'<img src="data:{spotlight_image_mime};base64,{b64}" alt="Demo screenshot" '
+            f'style="display:block;width:100%;max-width:100%;height:auto;border-radius:8px;'
+            f'border:1px solid #e2e8f0;margin-top:14px;" />'
+        )
+
     footer_cta = ""
     if issue.footer_cta:
         footer_cta = (
@@ -290,20 +339,21 @@ def build_email_html(issue: SentIssue) -> str:
             f'{_esc(issue.footer_cta)}</div></td></tr>'
         )
 
-    return f"""<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f1f5f9;">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">{GOOGLE_FONTS_LINK}</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;">
 <tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;">
   <tr><td style="background:{NAVY_HEX};padding:28px 32px;border-bottom:5px solid {ORANGE_HEX};">
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:0.5px;">THE RETAIL READ</div>
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#cbd5e1;margin-top:4px;">Issue {issue.issue_number:03d} &nbsp;·&nbsp; {html_lib.escape(date)}</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:{ORANGE_HEX};letter-spacing:2px;text-transform:uppercase;">THE RETAIL READ</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;color:#ffffff;line-height:1.25;margin-top:8px;">{html_lib.escape(issue.title, quote=False)}</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#cbd5e1;margin-top:8px;">Issue {issue.issue_number:03d} &nbsp;·&nbsp; {html_lib.escape(date)}</div>
   </td></tr>
   {section_block("The Read", prose(s.the_read.content))}
   {section_block("What's Moving", bullets(_whats_moving_lines(s)))}
-  {section_block("Use Case Spotlight", tailored + prose(s.use_case_spotlight.content))}
+  {section_block("Use Case Spotlight", tailored + prose(s.use_case_spotlight.content) + spotlight_img)}
   {section_block("Wins & References", bullets(_bullets(s.wins.items)))}
   {section_block("On the Horizon", bullets(_bullets(s.horizon.items)))}
   {footer_cta}
@@ -318,6 +368,8 @@ def build_email_html(issue: SentIssue) -> str:
 </table>
 </body>
 </html>"""
+    # Swap the email-safe fallback stack for the Plus Jakarta Sans stack in one place.
+    return html.replace("font-family:Arial,Helvetica,sans-serif", f"font-family:{EMAIL_FONT_STACK}")
 
 
 # ================= Slack text =================

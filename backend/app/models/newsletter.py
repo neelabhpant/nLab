@@ -65,6 +65,7 @@ class IssueSections(BaseModel):
 
 class IssueDraftBase(BaseModel):
     issue_number: Optional[int] = None  # assigned at send-time
+    title: Optional[str] = None  # editorial headline; falls back to derived if empty
     sections: IssueSections = Field(default_factory=IssueSections)
     footer_cta: str = ""
 
@@ -76,6 +77,7 @@ class IssueDraftCreate(IssueDraftBase):
 class IssueDraftUpdate(BaseModel):
     """Partial update. Auto-save sends one of these per debounce tick."""
 
+    title: Optional[str] = None
     sections: Optional[IssueSections] = None
     footer_cta: Optional[str] = None
 

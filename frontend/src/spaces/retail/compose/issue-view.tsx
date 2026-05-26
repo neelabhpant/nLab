@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, AlertCircle, Loader2, FileDown, Code2, MessageSquare, Check } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Loader2, FileDown, Code2, MessageSquare, Check, Type } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
 import { useLayoutContext } from '@/shared/components/layout'
 import { useComposeStore, type SentIssue } from './stores/compose-store'
@@ -174,12 +174,21 @@ export function IssueView() {
 }
 
 function ExportToolbar({ issue }: { issue: SentIssue }) {
-  const [copied, setCopied] = useState<'slack' | 'html' | null>(null)
+  const [copied, setCopied] = useState<'slack' | 'html' | 'subject' | null>(null)
   const [busy, setBusy] = useState<'slack' | 'html' | null>(null)
 
-  const flash = (which: 'slack' | 'html') => {
+  const flash = (which: 'slack' | 'html' | 'subject') => {
     setCopied(which)
     setTimeout(() => setCopied((c) => (c === which ? null : c)), 2000)
+  }
+
+  const copySubject = async () => {
+    try {
+      await navigator.clipboard.writeText(issue.title)
+      flash('subject')
+    } catch {
+      /* silent */
+    }
   }
 
   const copySlack = async () => {
@@ -223,6 +232,19 @@ function ExportToolbar({ issue }: { issue: SentIssue }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2 mt-4">
+      <button
+        type="button"
+        onClick={copySubject}
+        className={`${btn} border-slate-300 bg-surface-0 text-slate-700 hover:border-amber-400 hover:text-amber-800`}
+        title="Copy the issue title to use as the email subject line"
+      >
+        {copied === 'subject' ? (
+          <Check className="w-3.5 h-3.5 text-emerald-600" />
+        ) : (
+          <Type className="w-3.5 h-3.5" />
+        )}
+        {copied === 'subject' ? 'Copied subject' : 'Copy subject'}
+      </button>
       <a
         href={issuePdfUrl(issue.id)}
         target="_blank"
