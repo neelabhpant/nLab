@@ -12,12 +12,19 @@ _jwt_secret: str | None = None
 
 
 def _get_jwt_secret() -> str:
-    """Return the JWT secret, generating a random one if not configured."""
+    """Return the JWT secret, generating a random one if not configured.
+
+    Reads the value pydantic-settings loaded from .env first; pydantic does not
+    export .env values into os.environ, so a bare os.getenv misses them. Falls
+    back to a real OS env var (e.g. for container deploys), then a random secret.
+    """
     global _jwt_secret
     if _jwt_secret is not None:
         return _jwt_secret
 
-    secret = os.getenv("JWT_SECRET", "")
+    from app.config import get_settings
+
+    secret = get_settings().jwt_secret or os.getenv("JWT_SECRET", "")
     if not secret:
         secret = secrets.token_hex(32)
         logger.warning("JWT_SECRET not set — using a random secret (tokens won't survive restarts)")
