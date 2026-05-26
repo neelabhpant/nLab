@@ -307,3 +307,59 @@ def test_slugify_title() -> None:
     assert slugify("The AI cost crisis hits retail next.") == "the-ai-cost-crisis-hits-retail-next"
     assert slugify("  Multiple   spaces & symbols!! ") == "multiple-spaces-symbols"
     assert slugify("", fallback="issue-001") == "issue-001"
+
+
+# ---------- Hero upload auto-compression (Phase 9 / sustainability) ----------
+
+
+@pytest.mark.asyncio
+async def test_hero_upload_auto_compresses(service: ComposerService, isolated_storage: LocalStorageBackend) -> None:
+    """A >2MB, >1200px-wide upload is resized + re-encoded under 200KB before storage."""
+    import io
+    import os
+
+    from PIL import Image, ImageFilter
+
+    # Blurred high-res noise = a photo-like upload: large at source (> 2MB) but
+    # compresses well after downscaling (unlike pure noise, which is pathological).
+    W, H = 5600, 3700
+    big_img = Image.frombytes("RGB", (W, H), os.urandom(W * H * 3)).filter(ImageFilter.GaussianBlur(4))
+    buf = io.BytesIO()
+    big_img.save(buf, format="JPEG", quality=95)
+    big = buf.getvalue()
+    assert len(big) > 2_000_000, f"fixture upload not big enough: {len(big)} bytes"
+
+    draft = await service.create_draft(IssueDraftCreate())
+    updated = await service.set_hero_image(draft.id, big, "hero.jpg")
+    assert updated is not None and updated.hero_image_path
+
+    stored = await isolated_storage.get_file(updated.hero_image_path)
+    assert len(stored) < 200_000, f"stored hero not compressed: {len(stored)} bytes"
+
+    out = Image.open(io.BytesIO(stored))
+    assert out.width <= 1200  # resized to max width
+
+
+def test_compress_hero_image_resizes_and_shrinks() -> None:
+    """compress_hero_image resizes wide images and returns jpg under target."""
+    import io
+
+    from PIL import Image
+
+    from app.services.newsletter.composer import compress_hero_image
+
+    img = Image.new("RGB", (3000, 1500), (200, 120, 40))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    data, ext = compress_hero_image(buf.getvalue(), "png")
+    assert ext == "jpg"
+    out = Image.open(io.BytesIO(data))
+    assert out.width == 1200
+    assert len(data) < 200_000
+
+    # A small in-budget image is returned untouched.
+    small = io.BytesIO()
+    Image.new("RGB", (600, 250), (246, 241, 232)).save(small, format="JPEG", quality=80)
+    small_bytes = small.getvalue()
+    out_bytes, out_ext = compress_hero_image(small_bytes, "jpg")
+    assert out_bytes == small_bytes and out_ext == "jpg"

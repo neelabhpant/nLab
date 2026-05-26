@@ -8,6 +8,7 @@ This service bundles/unbundles between Pydantic models and that storage shape.
 
 from __future__ import annotations
 
+import io
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -48,6 +49,54 @@ def _new_id() -> str:
 
 def _new_issue_id() -> str:
     return f"issue-{uuid.uuid4().hex[:12]}"
+
+
+HERO_MAX_WIDTH = 1200
+HERO_TARGET_BYTES = 200_000
+HERO_PAPER_RGB = (246, 241, 232)  # #f6f1e8 — flatten alpha onto the Briefing cream
+
+
+def compress_hero_image(data: bytes, ext: str, quality: int = 80) -> tuple[bytes, str]:
+    """Resize/re-encode a hero upload so emails stay light.
+
+    - If wider than HERO_MAX_WIDTH, resize down preserving aspect ratio.
+    - If the (resized) bytes still exceed HERO_TARGET_BYTES, re-encode as JPEG
+      at `quality`, flattening any alpha onto the cream paper color.
+    - Returns (processed_bytes, ext). Best-effort: on any decode failure the
+      original bytes/ext are returned unchanged so the upload never blocks.
+    """
+    try:
+        from PIL import Image
+    except Exception:  # noqa: BLE001 — Pillow missing shouldn't break uploads
+        return data, ext
+
+    try:
+        img = Image.open(io.BytesIO(data))
+        img.load()
+    except Exception:  # noqa: BLE001 — not a decodable image; store as-is
+        return data, ext
+
+    resized = False
+    if img.width > HERO_MAX_WIDTH:
+        new_h = max(1, round(img.height * HERO_MAX_WIDTH / img.width))
+        img = img.resize((HERO_MAX_WIDTH, new_h), Image.LANCZOS)
+        resized = True
+
+    # Keep original bytes if already within budget and no resize was needed.
+    if not resized and len(data) <= HERO_TARGET_BYTES:
+        return data, ext
+
+    if img.mode in ("RGBA", "LA", "P"):
+        rgba = img.convert("RGBA")
+        bg = Image.new("RGB", rgba.size, HERO_PAPER_RGB)
+        bg.paste(rgba, mask=rgba.split()[-1])
+        img = bg
+    elif img.mode != "RGB":
+        img = img.convert("RGB")
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=quality, optimize=True)
+    return buf.getvalue(), "jpg"
 
 
 def _bundle_content(
@@ -456,6 +505,15 @@ class ComposerService:
         ext = (filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg")
         if ext not in {"jpg", "jpeg", "png"}:
             ext = "jpg"
+
+        # Auto-compress so emails stay light (resize > 1200px, re-encode > 200KB).
+        data, ext = compress_hero_image(data, ext)
+        if len(data) > HERO_TARGET_BYTES:
+            logger.warning(
+                "Hero for %s still %d KB after compression (target %d KB)",
+                draft_id, len(data) // 1024, HERO_TARGET_BYTES // 1024,
+            )
+
         rel = f"hero_images/{draft_id}.{ext}"
         storage = get_storage()
         await storage.store_file(rel, data)
