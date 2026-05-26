@@ -1,4 +1,5 @@
 import { api, API_BASE, getAuthQueryParam } from './api'
+import type { IssueDraft } from '@/spaces/retail/compose/stores/compose-store'
 
 /** Authenticated download URL for an issue's PDF (token in query for <a download>). */
 export function issuePdfUrl(issueId: string): string {
@@ -12,6 +13,13 @@ export function issueHtmlUrl(issueId: string): string {
   const sep = API_BASE.includes('?') ? '&' : '?'
   const auth = getAuthQueryParam()
   return `${API_BASE}/newsletter/issues/${issueId}/html${auth ? `${sep}${auth}` : ''}`
+}
+
+/** Authenticated URL for a draft's stored hero image (token in query for <img>). */
+export function heroUrl(draftId: string): string {
+  const sep = API_BASE.includes('?') ? '&' : '?'
+  const auth = getAuthQueryParam()
+  return `${API_BASE}/newsletter/drafts/${draftId}/hero${auth ? `${sep}${auth}` : ''}`
 }
 
 export type SectionKey =
@@ -144,6 +152,16 @@ export const newsletterApi = {
   async previewDraftHtml(draftId: string): Promise<string> {
     const { data } = await api.get(`/newsletter/drafts/${draftId}/preview`, { responseType: 'text' })
     return data as string
+  },
+
+  /** Upload a hero image (JPEG/PNG, ≤5MB) for a draft. Returns the updated draft. */
+  async uploadHero(draftId: string, file: File): Promise<IssueDraft> {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await api.post<IssueDraft>(`/newsletter/drafts/${draftId}/hero`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
   },
 
   // ---------- Voice corpus CRUD ----------

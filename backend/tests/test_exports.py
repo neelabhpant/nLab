@@ -76,13 +76,174 @@ def test_build_pdf_returns_pdf_bytes() -> None:
 
 def test_build_email_html_has_inline_styles_and_sections() -> None:
     html = build_email_html(_issue())
-    assert "style=" in html  # inline CSS
-    assert "<style>" not in html  # no <style> blocks (email clients drop them)
-    for heading in ["The Read", "What's Moving", "Use Case Spotlight", "Wins &amp; References", "On the Horizon"]:
-        assert heading in html
-    assert "Issue 001" in html
+    assert "style=" in html  # inline CSS on every element
+    # Briefing masthead + section labels (the four-moves / editor's note slots are omitted).
+    assert "The Retail Read" in html
+    for label in ["What I&#39;m reading", "Use Case Spotlight", "Wins &amp; References", "Where I&#39;ll be"]:
+        assert label in html
+    # Vol/No/Date strip uses zero-padded numbers, not "Issue 001".
+    assert "No.&nbsp;01" in html
     assert "#F96302" in html  # Cloudera orange
-    assert "Tailored for Walmart" in html
+    assert "Walmart" in html  # tailored-for account renders in the spotlight label row
+
+
+# ---------- Phase 8 auto-derivation ----------
+
+
+def test_derive_subhead_first_sentence() -> None:
+    from app.services.newsletter.exports import derive_subhead
+
+    assert derive_subhead("Agentic AI demands clean data. Without it, retailers lose.") == (
+        "Agentic AI demands clean data."
+    )
+    # No terminator → whole content (truncated).
+    assert derive_subhead("a one liner with no period").startswith("a one liner")
+    assert derive_subhead("") == ""
+
+
+def test_derive_pull_quote_prefers_last_paragraph() -> None:
+    from app.services.newsletter.exports import derive_pull_quote
+
+    text = (
+        "First paragraph here. Another short one.\n\n"
+        "The retailers winning at AI are the ones who decided early which decisions a machine "
+        "is allowed to make alone."
+    )
+    # Last paragraph's single sentence (< 35 words) wins.
+    assert derive_pull_quote(text).startswith("The retailers winning at AI")
+
+
+def test_derive_pull_quote_under_35_word_constraint() -> None:
+    from app.services.newsletter.exports import derive_pull_quote
+
+    long_sentence = " ".join(["word"] * 50) + "."  # 50 words, disqualified
+    short_sentence = "A crisp pull quote sentence."
+    # Both in the same single paragraph; only the short one qualifies.
+    assert derive_pull_quote(f"{long_sentence} {short_sentence}") == short_sentence
+
+
+def test_derive_pull_quote_none_when_no_qualifier() -> None:
+    from app.services.newsletter.exports import derive_pull_quote
+
+    only_long = " ".join(["word"] * 40) + "."  # 40 words, no boundary, disqualified
+    assert derive_pull_quote(only_long) is None
+    assert derive_pull_quote("") is None
+
+
+def test_derive_volume() -> None:
+    from app.services.newsletter.exports import derive_volume
+
+    assert derive_volume("2026-06-09") == 1  # 2026 → 1
+    assert derive_volume("2027-01-01") == 2
+    assert derive_volume("2025-01-01") == 1  # floored at 1
+    assert derive_volume(None) >= 1  # falls back to today, never below 1
+    assert derive_volume("not-a-date") >= 1
+
+
+def test_headline_with_em_wraps_last_word() -> None:
+    from app.services.newsletter.exports import headline_with_em
+
+    out = headline_with_em("The AI cost crisis hits retail next")
+    assert out.startswith("The AI cost crisis hits retail ")
+    assert out.endswith("<em style=\"font-style:italic;font-weight:500;\">next</em>")
+    # Single word still gets wrapped.
+    assert headline_with_em("Next") == '<em style="font-style:italic;font-weight:500;">Next</em>'
+    assert headline_with_em("") == ""
+
+
+# ---------- Phase 8 Briefing email render ----------
+
+
+def test_briefing_email_uses_plus_jakarta_sans_no_newsreader() -> None:
+    html = build_email_html(_issue())
+    assert "Plus Jakarta Sans" in html
+    assert "newsreader" not in html.lower()  # serif dropped entirely
+
+
+def test_briefing_email_has_kicker_headline_em_and_sections() -> None:
+    issue = _issue()
+    issue.kicker = "THE COST WALL"
+    html = build_email_html(issue)
+    assert "THE COST WALL" in html  # kicker, uppercased mono
+    assert "<em " in html  # headline last-word emphasis
+    # All five present sections render their Briefing labels.
+    assert "What I&#39;m reading" in html
+    assert "Use Case Spotlight" in html
+    assert "Wins &amp; References" in html
+    assert "Where I&#39;ll be" in html
+
+
+def test_briefing_email_kicker_defaults_to_feature() -> None:
+    issue = _issue()
+    issue.kicker = None
+    html = build_email_html(issue)
+    assert "FEATURE" in html
+
+
+def test_briefing_email_collapses_hero_when_absent() -> None:
+    html = build_email_html(_issue())  # no hero image
+    assert "<!-- ── 05 · HERO IMAGE" not in html
+    assert "data:image" not in html or "FIG &middot;" not in html
+
+
+def test_briefing_email_embeds_hero_when_present() -> None:
+    issue = _issue()
+    issue.hero_caption = "Inference cost curve"
+    html = build_email_html(issue, hero_image=b"\x89PNG\r\n\x1a\nfake", hero_image_mime="image/png")
+    assert "data:image/png;base64," in html
+    assert "FIG &middot;" in html
+    assert "Inference cost curve" in html
+
+
+def test_briefing_email_omits_pull_quote_when_none() -> None:
+    from app.models.newsletter import SentIssue as _SI
+
+    # The Read is a single 40-word sentence with no boundary → no pull quote.
+    sections = _sections()
+    sections.the_read.content = " ".join(["word"] * 40) + "."
+    issue = _SI(
+        id="x",
+        issue_number=3,
+        slug="issue-003",
+        title="Title here",
+        sections=sections,
+        footer_cta="",
+        sent_at="2026-06-09T12:00:00+00:00",
+    )
+    html = build_email_html(issue)
+    assert "── 09 · PULL QUOTE" not in html
+
+
+def test_briefing_email_omits_empty_sections_and_toc_entries() -> None:
+    from app.models.newsletter import IssueSections, SentIssue as _SI, TheReadSection
+
+    issue = _SI(
+        id="x",
+        issue_number=4,
+        slug="issue-004",
+        title="Only the read",
+        sections=IssueSections(the_read=TheReadSection(content="Only this section ships.")),
+        footer_cta="",
+        sent_at="2026-06-09T12:00:00+00:00",
+    )
+    html = build_email_html(issue)
+    # Empty sections collapse — their labels never appear.
+    assert "Use Case Spotlight" not in html
+    assert "Where I&#39;ll be" not in html
+    assert "What I&#39;m reading" not in html
+
+
+def test_briefing_email_has_no_model_metadata() -> None:
+    html = build_email_html(_issue()).lower()
+    for token in ("sonnet", "opus", "haiku", "claude", "newsreader"):
+        assert token not in html
+
+
+def test_briefing_email_uses_booking_url() -> None:
+    html = build_email_html(_issue(), booking_url="https://cal.example.com/neelabh/30")
+    assert "https://cal.example.com/neelabh/30" in html
+    # Default is "#".
+    assert 'href="#"' in build_email_html(_issue())
 
 
 def test_build_slack_text_uses_markdown() -> None:
@@ -121,7 +282,8 @@ async def test_mark_sent_generates_exports(isolated_storage: LocalStorageBackend
     pdf_bytes = await isolated_storage.get_file(issue.pdf_path)
     assert pdf_bytes[:5] == b"%PDF-"
     html_bytes = await isolated_storage.get_file(issue.html_path)
-    assert b"THE RETAIL READ" in html_bytes
+    assert b"The Retail Read" in html_bytes
+    assert b"Plus Jakarta Sans" in html_bytes
 
 
 @pytest.mark.asyncio

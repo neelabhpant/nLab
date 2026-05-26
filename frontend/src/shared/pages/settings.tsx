@@ -19,6 +19,7 @@ interface LlmSettings {
   generation_model_choices: string[]
   voice_check_mode: string
   voice_check_modes: string[]
+  booking_url: string
 }
 
 const MODEL_LABELS: Record<string, string> = {
@@ -54,6 +55,7 @@ export function Settings() {
   const [showGroqKey, setShowGroqKey] = useState(false)
   const [newsletterModel, setNewsletterModel] = useState('claude-sonnet-4-6')
   const [voiceCheckMode, setVoiceCheckMode] = useState('manual')
+  const [bookingUrl, setBookingUrl] = useState('')
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -65,6 +67,7 @@ export function Settings() {
       setGroqModel(data.groq_model)
       setNewsletterModel(data.newsletter_generation_model)
       setVoiceCheckMode(data.voice_check_mode)
+      setBookingUrl(data.booking_url ?? '')
     } catch {
       setError('Failed to load settings')
     } finally {
@@ -88,6 +91,7 @@ export function Settings() {
         groq_model: groqModel,
         newsletter_generation_model: newsletterModel,
         voice_check_mode: voiceCheckMode,
+        booking_url: bookingUrl,
       }
       if (openaiKey) payload.openai_api_key = openaiKey
       if (anthropicKey) payload.anthropic_api_key = anthropicKey
@@ -250,6 +254,19 @@ export function Settings() {
                   </select>
                   <p className="mt-1.5 text-xs font-body text-slate-500">
                     Manual only (default) avoids an extra LLM call after every generation — use the "Check voice" button per section. Auto on save runs it after each generation.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-body text-slate-600 mb-1.5">Booking URL</label>
+                  <input
+                    type="text"
+                    value={bookingUrl}
+                    onChange={(e) => setBookingUrl(e.target.value)}
+                    placeholder="https://cal.com/neelabh-pant/30min"
+                    className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
+                  />
+                  <p className="mt-1.5 text-xs font-body text-slate-500">
+                    Links the "Book a meeting" CTA in the newsletter. Leave blank to fall back to a placeholder.
                   </p>
                 </div>
               </div>

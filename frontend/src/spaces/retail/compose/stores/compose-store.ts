@@ -52,6 +52,10 @@ export interface IssueDraft {
   id: string
   issue_number: number | null
   title: string | null
+  kicker: string | null
+  ship_date: string | null
+  hero_image_path: string | null
+  hero_caption: string | null
   status: 'draft' | 'sent'
   sections: IssueSections
   footer_cta: string
@@ -65,6 +69,10 @@ export interface SentIssue {
   issue_number: number
   slug: string
   title: string
+  kicker: string | null
+  ship_date: string | null
+  hero_image_path: string | null
+  hero_caption: string | null
   sections: IssueSections
   footer_cta: string
   pdf_path: string | null
@@ -88,7 +96,12 @@ export const EMPTY_SECTIONS: IssueSections = {
   horizon: { items: ['', '', ''] },
 }
 
-type DraftPatch = Partial<Pick<IssueDraft, 'sections' | 'footer_cta' | 'title'>>
+type DraftPatch = Partial<
+  Pick<
+    IssueDraft,
+    'sections' | 'footer_cta' | 'title' | 'kicker' | 'ship_date' | 'hero_image_path' | 'hero_caption'
+  >
+>
 
 export type GenerationParams =
   | { kind: 'the_read'; userInput: string }
@@ -130,6 +143,7 @@ interface ComposeStore {
   loadDraft: (draftId: string) => Promise<void>
   updateCurrentDraft: (patch: DraftPatch) => void
   saveCurrentDraft: () => Promise<void>
+  uploadHero: (file: File) => Promise<void>
   deleteDraft: (draftId: string) => Promise<void>
   sendDraft: (draftId: string, recipientCount?: number) => Promise<SentIssue>
 
@@ -276,6 +290,9 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
     try {
       const { data } = await api.put<IssueDraft>(`/newsletter/drafts/${current.id}`, {
         title: current.title,
+        kicker: current.kicker,
+        ship_date: current.ship_date,
+        hero_caption: current.hero_caption,
         sections: current.sections,
         footer_cta: current.footer_cta,
       })
@@ -289,6 +306,23 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
       set({ saving: false, error: message })
     } finally {
       clearAutoSave()
+    }
+  },
+
+  async uploadHero(file) {
+    const current = get().currentDraft
+    if (!current) return
+    set({ saving: true, error: null })
+    try {
+      const updated = await newsletterApi.uploadHero(current.id, file)
+      set({
+        currentDraft: { ...updated },
+        saving: false,
+        lastSavedAt: updated.updated_at,
+      })
+    } catch (err) {
+      const message = extractErrorMessage(err, 'Hero upload failed')
+      set({ saving: false, error: message })
     }
   },
 

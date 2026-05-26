@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     # Voice-check trigger: "manual" | "auto_save" | "auto_preview". Default manual
     # to avoid an LLM call after every generation.
     voice_check_mode: str = "manual"
+    # Booking URL for the newsletter "Book a meeting" CTA. Default empty → "#".
+    booking_url: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

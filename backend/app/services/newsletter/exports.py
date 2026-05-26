@@ -15,41 +15,44 @@ from __future__ import annotations
 import base64
 import html as html_lib
 import re
-from datetime import datetime
+import urllib.parse
+from datetime import datetime, timezone
 from typing import Optional
 
 import fitz
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.models.newsletter import IssueSections, SentIssue
 
-# Cloudera brand font. Email clients that strip the web-font <link> fall back
-# to the system sans-serif stack; the composer preview (browser) loads it.
-EMAIL_FONT_STACK = (
-    "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-)
-GOOGLE_FONTS_LINK = (
-    '<link href="https://fonts.googleapis.com/css2?'
-    'family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">'
-)
+# ---------- Briefing palette (design-b-briefing/handoff/tokens.css) ----------
 
-# ---------- Branding ----------
-
-# Cloudera orange + deep navy (spec §8.1).
-CLOUDERA_ORANGE = (249, 99, 2)
-DEEP_NAVY = (15, 23, 41)
-SLATE_700 = (51, 65, 85)
-SLATE_500 = (100, 116, 139)
-SLATE_300 = (203, 213, 225)
-SLATE_100 = (241, 245, 249)
+# Cream paper + brown-black ink. The Briefing is a warm editorial surface,
+# not the old navy/slate dashboard scheme.
+PAPER = (246, 241, 232)       # #f6f1e8
+PAPER_EDGE = (236, 230, 216)  # #ece6d8
+INK = (21, 17, 13)            # #15110d
+INK_SOFT = (90, 79, 67)       # #5a4f43
+RULE_FAINT = (198, 187, 168)  # #c6bba8
+CLOUDERA_ORANGE = (249, 99, 2)  # #F96302
 WHITE = (255, 255, 255)
 
+PAPER_HEX = "#f6f1e8"
+INK_HEX = "#15110d"
+INK_SOFT_HEX = "#5a4f43"
 ORANGE_HEX = "#F96302"
-NAVY_HEX = "#0F1729"
 
 AUTHOR_NAME = "Neelabh Pant"
-AUTHOR_TITLE = "Director, Global AI Industry Solutions — Retail"
+AUTHOR_TITLE = "Director, Global AI Industry Solutions, Retail"
 AUTHOR_COMPANY = "Cloudera"
 AUTHOR_CONTACT = "npant@cloudera.com"
+
+# Jinja2 environment for the Briefing email template. Autoescape on for HTML —
+# we use `|safe` deliberately only for the headline (where we inject <em>).
+_TEMPLATE_DIR = __import__("pathlib").Path(__file__).resolve().parent / "templates"
+_jinja_env = Environment(
+    loader=FileSystemLoader(str(_TEMPLATE_DIR)),
+    autoescape=select_autoescape(["html", "j2", "html.j2"]),
+)
 
 SECTION_TITLES: list[tuple[str, str]] = [
     ("the_read", "The Read"),
@@ -84,6 +87,106 @@ def _whats_moving_lines(sections: IssueSections) -> list[str]:
     return [i.line.strip() for i in sections.whats_moving.items if i.line and i.line.strip()]
 
 
+# ---------- Auto-derivation (Briefing slots) ----------
+
+# A sentence boundary: a period/question/exclamation followed by whitespace.
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+
+def derive_subhead(the_read: str) -> str:
+    """First sentence of The Read. Stops at the first terminator + whitespace.
+
+    Falls back to the whole content (truncated) when there is no clear boundary.
+    """
+    text = (the_read or "").strip()
+    if not text:
+        return ""
+    parts = _SENTENCE_SPLIT.split(text, maxsplit=1)
+    first = parts[0].strip()
+    if first:
+        return first
+    return text[:200].strip()
+
+
+def _split_sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENTENCE_SPLIT.split((text or "").strip()) if s.strip()]
+
+
+def _longest_under_35(sentences: list[str]) -> Optional[str]:
+    """Longest sentence with fewer than 35 whitespace-delimited words, else None."""
+    qualifying = [s for s in sentences if len(s.split()) < 35]
+    if not qualifying:
+        return None
+    return max(qualifying, key=lambda s: len(s.split()))
+
+
+def derive_pull_quote(the_read: str) -> Optional[str]:
+    """Pull quote = longest <35-word sentence in the LAST paragraph; then any
+    paragraph; else None. Quote marks are added by the template.
+    """
+    text = (the_read or "").strip()
+    if not text:
+        return None
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    if not paragraphs:
+        return None
+    last = _longest_under_35(_split_sentences(paragraphs[-1]))
+    if last:
+        return last
+    return _longest_under_35(_split_sentences(text))
+
+
+def derive_volume(ship_date: Optional[str]) -> int:
+    """Volume = year(ship_date or today) − 2025, floored at 1. 2026 → 1."""
+    year: Optional[int] = None
+    if ship_date:
+        try:
+            year = datetime.fromisoformat(ship_date.replace("Z", "+00:00")).year
+        except (ValueError, AttributeError):
+            year = None
+    if year is None:
+        year = datetime.now(timezone.utc).year
+    return max(1, year - 2025)
+
+
+_LAST_WORD = re.compile(r"^(.*?)(\S+)$", re.DOTALL)
+
+
+def headline_with_em(title: str) -> str:
+    """Wrap the last whitespace-delimited word of the title in an italic <em>.
+
+    Both halves are HTML-escaped; the <em> markup is the only injected HTML, so
+    the result is safe to pass through `|safe` in the template.
+    """
+    t = (title or "").strip()
+    if not t:
+        return ""
+    words = t.split()
+    if len(words) == 1:
+        return (
+            '<em style="font-style:italic;font-weight:500;">'
+            f"{html_lib.escape(words[0], quote=False)}</em>"
+        )
+    head = " ".join(words[:-1])
+    last = words[-1]
+    return (
+        f"{html_lib.escape(head, quote=False)} "
+        '<em style="font-style:italic;font-weight:500;">'
+        f"{html_lib.escape(last, quote=False)}</em>"
+    )
+
+
+# TOC: hardcoded label + page-ref mapping, keyed by section. Only non-empty
+# sections appear (caller filters).
+_TOC_MAP: list[tuple[str, str, str]] = [
+    ("the_read", "The Read", "A1"),
+    ("whats_moving", "What's Moving", "A2"),
+    ("use_case_spotlight", "Use Case Spotlight", "B1"),
+    ("wins", "Wins & References", "B2"),
+    ("horizon", "On The Horizon", "C1"),
+]
+
+
 # ================= PDF =================
 
 PAGE_W = 595.28
@@ -116,70 +219,100 @@ def _wrap(text: str, font: str, size: float, max_width: float) -> list[str]:
 
 
 def build_pdf(issue: SentIssue, spotlight_image: Optional[bytes] = None) -> bytes:
-    """Render a Cloudera-branded archive PDF for a sent issue."""
+    """Render a Briefing-styled archive PDF for a sent issue.
+
+    Echoes the HTML Briefing hierarchy: cream paper, brown-black ink, Cloudera
+    orange accents, masthead + kicker + headline + section labels. Helvetica is
+    used (PyMuPDF built-in); Plus Jakarta Sans embedding is deferred — the HTML
+    is the brand-font channel.
+    """
     doc = fitz.open()
-    page = doc.new_page(width=PAGE_W, height=PAGE_H)
 
     body_font = "helv"
     bold_font = "hebo"
+    ital_font = "hebi"
+
+    def new_page() -> fitz.Page:
+        p = doc.new_page(width=PAGE_W, height=PAGE_H)
+        # Paint the full cream paper field.
+        p.draw_rect(fitz.Rect(0, 0, PAGE_W, PAGE_H), color=None, fill=_rgb(PAPER))
+        return p
+
+    page = new_page()
 
     def ensure(y: float, needed: float) -> tuple[fitz.Page, float]:
         nonlocal page
         if y + needed > PAGE_H - MARGIN:
-            page = doc.new_page(width=PAGE_W, height=PAGE_H)
+            page = new_page()
             return page, MARGIN + 6
         return page, y
 
-    # --- Header band (Option A: wordmark / editorial headline / meta) ---
-    title_lines = _wrap(issue.title or "", bold_font, 15, CONTENT_W)[:2]
-    wordmark_y = 34
-    title_y0 = 58
-    title_leading = 19
-    meta_y = title_y0 + (len(title_lines) - 1) * title_leading + 26
-    header_h = meta_y + 16
-
-    page.draw_rect(fitz.Rect(0, 0, PAGE_W, header_h), color=None, fill=_rgb(DEEP_NAVY))
-    page.draw_rect(fitz.Rect(0, header_h - 5, PAGE_W, header_h), color=None, fill=_rgb(CLOUDERA_ORANGE))
-    # Tier 1 — brand wordmark.
+    # --- Top dark strip: Vol · No · Date, with the Cloudera dot wordmark. ---
+    strip_h = 30
+    page.draw_rect(fitz.Rect(0, 0, PAGE_W, strip_h), color=None, fill=_rgb(INK))
+    vol = derive_volume(issue.ship_date)
+    date_str = _format_date(issue.ship_date or issue.sent_at)
     page.insert_text(
-        fitz.Point(MARGIN, wordmark_y),
-        "THE RETAIL READ",
+        fitz.Point(MARGIN, 19),
+        f"VOL. {vol:02d}   ·   NO. {issue.issue_number:02d}   ·   {date_str.upper()}",
         fontname=bold_font,
-        fontsize=18,
-        color=_rgb(WHITE),
+        fontsize=8,
+        color=_rgb(PAPER),
     )
-    # Tier 2 — editorial headline (the issue title).
-    ty = title_y0
-    for line in title_lines:
-        page.insert_text(fitz.Point(MARGIN, ty), line, fontname=bold_font, fontsize=15, color=_rgb(WHITE))
-        ty += title_leading
-    # Tier 3 — issue + date meta.
+    page.draw_circle(fitz.Point(PAGE_W - MARGIN - 56, 15), 4, color=None, fill=_rgb(CLOUDERA_ORANGE))
     page.insert_text(
-        fitz.Point(MARGIN, meta_y),
-        f"Issue {issue.issue_number:03d}  ·  {_format_date(issue.sent_at)}",
-        fontname=body_font,
-        fontsize=10,
-        color=_rgb(SLATE_300),
+        fitz.Point(PAGE_W - MARGIN - 48, 19), "CLOUDERA", fontname=bold_font, fontsize=9, color=_rgb(PAPER)
     )
 
-    y = header_h + 26
+    # --- Masthead: tagline / The Retail Read / byline. ---
+    y = strip_h + 34
+    tagline = "A BI-WEEKLY BRIEFING ON AI IN RETAIL"
+    tag_w = fitz.get_text_length(tagline, fontname=bold_font, fontsize=8)
+    page.insert_text(fitz.Point((PAGE_W - tag_w) / 2, y), tagline, fontname=bold_font, fontsize=8, color=_rgb(INK_SOFT))
+    y += 30
+    mast = "The Retail Read"
+    mast_w = fitz.get_text_length(mast, fontname=bold_font, fontsize=34)
+    page.insert_text(fitz.Point((PAGE_W - mast_w) / 2, y), mast, fontname=bold_font, fontsize=34, color=_rgb(INK))
+    page.draw_rect(
+        fitz.Rect((PAGE_W + mast_w) / 2 + 4, y - 10, (PAGE_W + mast_w) / 2 + 11, y - 3),
+        color=None,
+        fill=_rgb(CLOUDERA_ORANGE),
+    )
+    y += 18
+    byline = f"EDITED BY {AUTHOR_NAME.upper()}  ·  {AUTHOR_TITLE.upper()}  ·  {AUTHOR_COMPANY.upper()}"
+    by_w = fitz.get_text_length(byline, fontname=bold_font, fontsize=7)
+    page.insert_text(fitz.Point((PAGE_W - by_w) / 2, y), byline, fontname=bold_font, fontsize=7, color=_rgb(INK_SOFT))
+    y += 18
+
+    # --- Double rule. ---
+    page.draw_rect(fitz.Rect(MARGIN, y, MARGIN + CONTENT_W, y + 3), color=None, fill=_rgb(INK))
+    page.draw_rect(fitz.Rect(MARGIN, y + 6, MARGIN + CONTENT_W, y + 7), color=None, fill=_rgb(INK))
+    y += 26
+
+    # --- Kicker + headline. ---
+    kicker = (issue.kicker or "").strip().upper() or "FEATURE"
+    page.insert_text(fitz.Point(MARGIN, y), kicker, fontname=bold_font, fontsize=8, color=_rgb(CLOUDERA_ORANGE))
+    y += 22
+    for line in _wrap(issue.title or "", bold_font, 24, CONTENT_W):
+        page, y = ensure(y, 28)
+        page.insert_text(fitz.Point(MARGIN, y), line, fontname=bold_font, fontsize=24, color=_rgb(INK))
+        y += 28
+    y += 10
 
     def section_header(title: str, yy: float) -> float:
-        page.draw_rect(fitz.Rect(MARGIN, yy - 10, MARGIN + 4, yy + 4), color=None, fill=_rgb(CLOUDERA_ORANGE))
+        page, yy = ensure(yy, 30)
+        page.draw_rect(fitz.Rect(MARGIN, yy, MARGIN + CONTENT_W, yy + 2), color=None, fill=_rgb(INK))
+        yy += 16
         page.insert_text(
-            fitz.Point(MARGIN + 14, yy),
-            title.upper(),
-            fontname=bold_font,
-            fontsize=12,
-            color=_rgb(DEEP_NAVY),
+            fitz.Point(MARGIN, yy), title.upper(), fontname=bold_font, fontsize=10, color=_rgb(INK)
         )
-        return yy + 18
+        return yy + 16
 
     def prose(text: str, yy: float, size: float = 10.5, leading: float = 15) -> float:
         for line in _wrap(text, body_font, size, CONTENT_W):
             page, yy = ensure(yy, leading)
             if line:
-                page.insert_text(fitz.Point(MARGIN, yy), line, fontname=body_font, fontsize=size, color=_rgb(SLATE_700))
+                page.insert_text(fitz.Point(MARGIN, yy), line, fontname=body_font, fontsize=size, color=_rgb(INK))
             yy += leading
         return yy
 
@@ -189,34 +322,31 @@ def build_pdf(issue: SentIssue, spotlight_image: Optional[bytes] = None) -> byte
             page, yy = ensure(yy, leading)
             if idx == 0:
                 page.insert_text(fitz.Point(MARGIN, yy), "•", fontname=body_font, fontsize=size, color=_rgb(CLOUDERA_ORANGE))
-            page.insert_text(fitz.Point(MARGIN + 16, yy), line, fontname=body_font, fontsize=size, color=_rgb(SLATE_700))
+            page.insert_text(fitz.Point(MARGIN + 16, yy), line, fontname=body_font, fontsize=size, color=_rgb(INK))
             yy += leading
         return yy + 3
 
     s = issue.sections
 
     # 1. The Read
-    page, y = ensure(y, 40)
     y = section_header("The Read", y)
     y = prose(s.the_read.content or "—", y)
     y += 14
 
     # 2. What's Moving
-    page, y = ensure(y, 40)
     y = section_header("What's Moving", y)
     for line in _whats_moving_lines(s):
         y = bullet(line, y)
     y += 11
 
     # 3. Use Case Spotlight
-    page, y = ensure(y, 40)
     y = section_header("Use Case Spotlight", y)
     if s.use_case_spotlight.tailored_for_account:
         page, y = ensure(y, 14)
         page.insert_text(
             fitz.Point(MARGIN, y),
             f"Tailored for {s.use_case_spotlight.tailored_for_account}",
-            fontname=bold_font,
+            fontname=ital_font,
             fontsize=9,
             color=_rgb(CLOUDERA_ORANGE),
         )
@@ -228,39 +358,41 @@ def build_pdf(issue: SentIssue, spotlight_image: Optional[bytes] = None) -> byte
             page, y = ensure(y, img_rect.height + 12)
             img_rect = fitz.Rect(MARGIN, y + 6, MARGIN + CONTENT_W, y + 6 + CONTENT_W * 0.5)
             page.insert_image(img_rect, stream=spotlight_image, keep_proportion=True)
+            # 1px ink border, no rounding (Briefing image treatment).
+            page.draw_rect(img_rect, color=_rgb(RULE_FAINT), width=0.8)
             y = img_rect.y1 + 8
         except Exception:  # noqa: BLE001 — a bad image must not break the PDF
             pass
     y += 14
 
     # 4. Wins & References
-    page, y = ensure(y, 40)
     y = section_header("Wins & References", y)
     for item in _bullets(s.wins.items):
         y = bullet(item, y)
     y += 11
 
     # 5. On the Horizon
-    page, y = ensure(y, 40)
     y = section_header("On the Horizon", y)
     for item in _bullets(s.horizon.items):
         y = bullet(item, y)
     y += 16
 
-    # Footer CTA + author block
+    # Footer CTA + colophon.
     if issue.footer_cta:
         page, y = ensure(y, 30)
-        page.draw_rect(fitz.Rect(MARGIN, y, MARGIN + CONTENT_W, y + 0.6), color=None, fill=_rgb(SLATE_300))
+        page.draw_rect(fitz.Rect(MARGIN, y, MARGIN + CONTENT_W, y + 0.8), color=None, fill=_rgb(RULE_FAINT))
         y += 16
         y = prose(issue.footer_cta, y, size=10, leading=14)
         y += 6
 
-    page, y = ensure(y, 56)
-    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_NAME, fontname=bold_font, fontsize=10, color=_rgb(DEEP_NAVY))
+    page, y = ensure(y, 60)
+    page.draw_rect(fitz.Rect(MARGIN, y, MARGIN + CONTENT_W, y + 2), color=None, fill=_rgb(INK))
+    y += 18
+    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_NAME, fontname=bold_font, fontsize=10, color=_rgb(INK))
     y += 14
-    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_TITLE, fontname=body_font, fontsize=9, color=_rgb(SLATE_500))
+    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_TITLE, fontname=body_font, fontsize=9, color=_rgb(INK_SOFT))
     y += 12
-    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_COMPANY, fontname=body_font, fontsize=9, color=_rgb(SLATE_500))
+    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_COMPANY, fontname=body_font, fontsize=9, color=_rgb(INK_SOFT))
     y += 12
     page.insert_text(fitz.Point(MARGIN, y), AUTHOR_CONTACT, fontname=body_font, fontsize=9, color=_rgb(CLOUDERA_ORANGE))
 
@@ -270,106 +402,92 @@ def build_pdf(issue: SentIssue, spotlight_image: Optional[bytes] = None) -> byte
 # ================= Email HTML =================
 
 
-def _esc(text: str) -> str:
-    return html_lib.escape(text or "").replace("\n", "<br>")
+def _data_uri(data: Optional[bytes], mime: str) -> Optional[str]:
+    if not data:
+        return None
+    return f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
 
 
 def build_email_html(
     issue: SentIssue,
     spotlight_image: Optional[bytes] = None,
     spotlight_image_mime: str = "image/png",
+    hero_image: Optional[bytes] = None,
+    hero_image_mime: str = "image/jpeg",
+    booking_url: str = "#",
+    spotlight_title: Optional[str] = None,
 ) -> str:
-    """Single-column, inline-CSS HTML suitable for pasting into Outlook/Gmail.
+    """Render the Briefing email (Plus Jakarta Sans throughout) via Jinja2.
 
-    If a spotlight image is supplied it is base64-embedded after the spotlight
-    prose (self-contained — no auth or host dependency, renders in the preview
-    iframe and survives a paste into a compose window).
+    Hero + spotlight images are base64-embedded as data URIs (self-contained, no
+    host dependency — renders in the preview iframe and survives paste). Slots
+    collapse gracefully when their source section is empty.
     """
     s = issue.sections
-    date = _format_date(issue.sent_at)
+    the_read = (s.the_read.content or "").strip()
 
-    def section_block(title: str, inner: str) -> str:
-        return (
-            f'<tr><td style="padding:24px 32px 0 32px;">'
-            f'<div style="border-left:4px solid {ORANGE_HEX};padding-left:12px;">'
-            f'<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;'
-            f'letter-spacing:1px;text-transform:uppercase;color:{NAVY_HEX};">{html_lib.escape(title, quote=False)}</div>'
-            f'</div>{inner}</td></tr>'
-        )
+    # Sections present (drives both the slots and the TOC).
+    present: dict[str, bool] = {
+        "the_read": bool(the_read),
+        "whats_moving": bool(_whats_moving_lines(s)),
+        "use_case_spotlight": bool((s.use_case_spotlight.content or "").strip()),
+        "wins": bool(_bullets(s.wins.items)),
+        "horizon": bool(_bullets(s.horizon.items)),
+    }
 
-    def prose(text: str) -> str:
-        return (
-            f'<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;'
-            f'color:#334155;margin:10px 0 0 0;">{_esc(text or "—")}</p>'
-        )
+    # Drop cap: first letter floats; the rest flows. Plain text, autoescaped.
+    first_letter = the_read[:1]
+    rest = the_read[1:]
 
-    def bullets(items: list[str]) -> str:
-        if not items:
-            return prose("—")
-        lis = "".join(
-            f'<li style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;'
-            f'color:#334155;margin-bottom:6px;">{_esc(i)}</li>'
-            for i in items
-        )
-        return f'<ul style="margin:10px 0 0 0;padding-left:20px;">{lis}</ul>'
+    # Spotlight title: resolved POV name when supplied, else the section default.
+    spotlight_ctx = None
+    if present["use_case_spotlight"]:
+        spotlight_ctx = {
+            "title": (spotlight_title or "").strip() or "Use Case Spotlight",
+            "content": (s.use_case_spotlight.content or "").strip(),
+            "tailored_for": (s.use_case_spotlight.tailored_for_account or "").strip() or None,
+            "image_data_uri": _data_uri(spotlight_image, spotlight_image_mime),
+        }
 
-    tailored = ""
-    if s.use_case_spotlight.tailored_for_account:
-        tailored = (
-            f'<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;'
-            f'color:{ORANGE_HEX};margin-top:8px;">Tailored for '
-            f'{html_lib.escape(s.use_case_spotlight.tailored_for_account)}</div>'
-        )
+    toc = [
+        {"label": label, "ref": ref}
+        for key, label, ref in _TOC_MAP
+        if present.get(key)
+    ]
 
-    spotlight_img = ""
-    if spotlight_image:
-        b64 = base64.b64encode(spotlight_image).decode("ascii")
-        spotlight_img = (
-            f'<img src="data:{spotlight_image_mime};base64,{b64}" alt="Demo screenshot" '
-            f'style="display:block;width:100%;max-width:100%;height:auto;border-radius:8px;'
-            f'border:1px solid #e2e8f0;margin-top:14px;" />'
-        )
+    reply_subject = urllib.parse.quote(
+        f"Re: The Retail Read · No. {issue.issue_number:02d}"
+    )
 
-    footer_cta = ""
-    if issue.footer_cta:
-        footer_cta = (
-            f'<tr><td style="padding:24px 32px 0 32px;">'
-            f'<div style="border-top:1px solid #e2e8f0;padding-top:16px;'
-            f'font-family:Arial,Helvetica,sans-serif;font-size:14px;font-style:italic;color:#475569;">'
-            f'{_esc(issue.footer_cta)}</div></td></tr>'
-        )
+    ctx = {
+        "issue_no": f"{issue.issue_number:02d}",
+        "volume": f"{derive_volume(issue.ship_date):02d}",
+        "date_str": _format_date(issue.ship_date or issue.sent_at).replace(" ", " "),
+        "kicker": (issue.kicker or "").strip().upper() or "FEATURE",
+        "headline_html": headline_with_em(issue.title),
+        "subhead": derive_subhead(the_read) if present["the_read"] else "",
+        "toc": toc,
+        "hero_data_uri": _data_uri(hero_image, hero_image_mime),
+        "hero_caption": (issue.hero_caption or "").strip() or None,
+        "the_read": the_read,
+        "the_read_first_letter": first_letter,
+        "the_read_rest": rest,
+        "pull_quote": derive_pull_quote(the_read) if present["the_read"] else None,
+        "spotlight": spotlight_ctx,
+        "wins": _bullets(s.wins.items),
+        "reading": _whats_moving_lines(s),
+        "events": _bullets(s.horizon.items),
+        "footer_cta": (issue.footer_cta or "").strip(),
+        "booking_url": booking_url or "#",
+        "reply_subject": reply_subject,
+        "author_name": AUTHOR_NAME,
+        "author_title": AUTHOR_TITLE,
+        "author_company": AUTHOR_COMPANY,
+        "author_contact": AUTHOR_CONTACT,
+    }
 
-    html = f"""<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">{GOOGLE_FONTS_LINK}</head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;">
-  <tr><td style="background:{NAVY_HEX};padding:28px 32px;border-bottom:5px solid {ORANGE_HEX};">
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:{ORANGE_HEX};letter-spacing:2px;text-transform:uppercase;">THE RETAIL READ</div>
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;color:#ffffff;line-height:1.25;margin-top:8px;">{html_lib.escape(issue.title, quote=False)}</div>
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#cbd5e1;margin-top:8px;">Issue {issue.issue_number:03d} &nbsp;·&nbsp; {html_lib.escape(date)}</div>
-  </td></tr>
-  {section_block("The Read", prose(s.the_read.content))}
-  {section_block("What's Moving", bullets(_whats_moving_lines(s)))}
-  {section_block("Use Case Spotlight", tailored + prose(s.use_case_spotlight.content) + spotlight_img)}
-  {section_block("Wins & References", bullets(_bullets(s.wins.items)))}
-  {section_block("On the Horizon", bullets(_bullets(s.horizon.items)))}
-  {footer_cta}
-  <tr><td style="padding:24px 32px 28px 32px;border-top:1px solid #e2e8f0;">
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:{NAVY_HEX};">{html_lib.escape(AUTHOR_NAME)}</div>
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;margin-top:2px;">{html_lib.escape(AUTHOR_TITLE, quote=False)}</div>
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;">{html_lib.escape(AUTHOR_COMPANY)}</div>
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:{ORANGE_HEX};margin-top:2px;"><a href="mailto:{html_lib.escape(AUTHOR_CONTACT, quote=True)}" style="color:{ORANGE_HEX};text-decoration:none;">{html_lib.escape(AUTHOR_CONTACT)}</a></div>
-  </td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>"""
-    # Swap the email-safe fallback stack for the Plus Jakarta Sans stack in one place.
-    return html.replace("font-family:Arial,Helvetica,sans-serif", f"font-family:{EMAIL_FONT_STACK}")
+    template = _jinja_env.get_template("briefing_email.html.j2")
+    return template.render(**ctx)
 
 
 # ================= Slack text =================

@@ -32,6 +32,7 @@ class SettingsResponse(BaseModel):
     generation_model_choices: list[str]
     voice_check_mode: str
     voice_check_modes: list[str]
+    booking_url: str
 
 
 class SettingsUpdate(BaseModel):
@@ -46,6 +47,7 @@ class SettingsUpdate(BaseModel):
     groq_api_key: Optional[str] = None
     newsletter_generation_model: Optional[str] = None
     voice_check_mode: Optional[str] = None
+    booking_url: Optional[str] = None
 
 
 def _to_response(s: dict) -> SettingsResponse:
@@ -62,6 +64,7 @@ def _to_response(s: dict) -> SettingsResponse:
         generation_model_choices=GENERATION_MODEL_CHOICES,
         voice_check_mode=s["voice_check_mode"],
         voice_check_modes=VOICE_CHECK_MODES,
+        booking_url=s.get("booking_url", ""),
     )
 
 
@@ -95,6 +98,8 @@ async def update_settings(body: SettingsUpdate) -> SettingsResponse:
         updates["newsletter_generation_model"] = body.newsletter_generation_model
     if body.voice_check_mode is not None:
         updates["voice_check_mode"] = body.voice_check_mode
+    if body.booking_url is not None:
+        updates["booking_url"] = body.booking_url
 
     merged = {**current, **updates}
     save_user_settings(merged)

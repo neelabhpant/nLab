@@ -60,6 +60,7 @@ def get_user_settings() -> dict:
             "newsletter_generation_model", env.newsletter_generation_model
         ),
         "voice_check_mode": user.get("voice_check_mode", env.voice_check_mode),
+        "booking_url": user.get("booking_url", env.booking_url),
     }
 
 

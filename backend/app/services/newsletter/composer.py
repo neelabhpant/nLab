@@ -50,24 +50,67 @@ def _new_issue_id() -> str:
     return f"issue-{uuid.uuid4().hex[:12]}"
 
 
-def _bundle_content(sections: IssueSections, footer_cta: str, title: Optional[str] = None) -> dict:
-    """Bundle the section payload into the `content_json` blob shape."""
+def _bundle_content(
+    sections: IssueSections,
+    footer_cta: str,
+    title: Optional[str] = None,
+    *,
+    kicker: Optional[str] = None,
+    ship_date: Optional[str] = None,
+    hero_image_path: Optional[str] = None,
+    hero_caption: Optional[str] = None,
+) -> dict:
+    """Bundle the section payload + Briefing meta into the `content_json` blob shape."""
     return {
         "sections": sections.model_dump(),
         "footer_cta": footer_cta,
         "title": title,
+        "kicker": kicker,
+        "ship_date": ship_date,
+        "hero_image_path": hero_image_path,
+        "hero_caption": hero_caption,
     }
 
 
-def _unbundle_content(content: object) -> tuple[IssueSections, str, Optional[str]]:
+class _UnbundledContent:
+    """Lightweight holder for the unbundled content_json blob."""
+
+    __slots__ = ("sections", "footer_cta", "title", "kicker", "ship_date", "hero_image_path", "hero_caption")
+
+    def __init__(
+        self,
+        sections: IssueSections,
+        footer_cta: str,
+        title: Optional[str],
+        kicker: Optional[str],
+        ship_date: Optional[str],
+        hero_image_path: Optional[str],
+        hero_caption: Optional[str],
+    ) -> None:
+        self.sections = sections
+        self.footer_cta = footer_cta
+        self.title = title
+        self.kicker = kicker
+        self.ship_date = ship_date
+        self.hero_image_path = hero_image_path
+        self.hero_caption = hero_caption
+
+
+def _unbundle_content(content: object) -> _UnbundledContent:
     """Reverse of _bundle_content. Tolerant of missing/legacy fields."""
     if not isinstance(content, dict):
-        return IssueSections(), "", None
+        return _UnbundledContent(IssueSections(), "", None, None, None, None, None)
     sections_data = content.get("sections") or {}
     sections = IssueSections(**sections_data) if isinstance(sections_data, dict) else IssueSections()
-    footer = content.get("footer_cta") or ""
-    title = content.get("title")
-    return sections, footer, title
+    return _UnbundledContent(
+        sections=sections,
+        footer_cta=content.get("footer_cta") or "",
+        title=content.get("title"),
+        kicker=content.get("kicker"),
+        ship_date=content.get("ship_date"),
+        hero_image_path=content.get("hero_image_path"),
+        hero_caption=content.get("hero_caption"),
+    )
 
 
 def _draft_to_row(draft: IssueDraft) -> dict:
@@ -75,7 +118,15 @@ def _draft_to_row(draft: IssueDraft) -> dict:
         "id": draft.id,
         "issue_number": draft.issue_number,
         "status": draft.status,
-        "content_json": _bundle_content(draft.sections, draft.footer_cta, draft.title),
+        "content_json": _bundle_content(
+            draft.sections,
+            draft.footer_cta,
+            draft.title,
+            kicker=draft.kicker,
+            ship_date=draft.ship_date,
+            hero_image_path=draft.hero_image_path,
+            hero_caption=draft.hero_caption,
+        ),
         "created_at": draft.created_at,
         "updated_at": draft.updated_at,
         "sent_at": draft.sent_at,
@@ -83,14 +134,18 @@ def _draft_to_row(draft: IssueDraft) -> dict:
 
 
 def _draft_from_row(row: dict) -> IssueDraft:
-    sections, footer, title = _unbundle_content(row.get("content_json"))
+    c = _unbundle_content(row.get("content_json"))
     return IssueDraft(
         id=row["id"],
         issue_number=row.get("issue_number"),
-        title=title,
+        title=c.title,
+        kicker=c.kicker,
+        ship_date=c.ship_date,
+        hero_image_path=c.hero_image_path,
+        hero_caption=c.hero_caption,
         status=row.get("status") or "draft",
-        sections=sections,
-        footer_cta=footer,
+        sections=c.sections,
+        footer_cta=c.footer_cta,
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         sent_at=row.get("sent_at"),
@@ -103,7 +158,14 @@ def _issue_to_row(issue: SentIssue) -> dict:
         "issue_number": issue.issue_number,
         "slug": issue.slug,
         "title": issue.title,
-        "content_json": _bundle_content(issue.sections, issue.footer_cta),
+        "content_json": _bundle_content(
+            issue.sections,
+            issue.footer_cta,
+            kicker=issue.kicker,
+            ship_date=issue.ship_date,
+            hero_image_path=issue.hero_image_path,
+            hero_caption=issue.hero_caption,
+        ),
         "pdf_path": issue.pdf_path,
         "html_path": issue.html_path,
         "sent_at": issue.sent_at,
@@ -112,14 +174,18 @@ def _issue_to_row(issue: SentIssue) -> dict:
 
 
 def _issue_from_row(row: dict) -> SentIssue:
-    sections, footer, _title = _unbundle_content(row.get("content_json"))
+    c = _unbundle_content(row.get("content_json"))
     return SentIssue(
         id=row["id"],
         issue_number=row["issue_number"],
         slug=row["slug"],
         title=row["title"],
-        sections=sections,
-        footer_cta=footer,
+        kicker=c.kicker,
+        ship_date=c.ship_date,
+        hero_image_path=c.hero_image_path,
+        hero_caption=c.hero_caption,
+        sections=c.sections,
+        footer_cta=c.footer_cta,
         pdf_path=row.get("pdf_path"),
         html_path=row.get("html_path"),
         sent_at=row["sent_at"],
@@ -142,6 +208,10 @@ class ComposerService:
             status="draft",
             issue_number=data.issue_number,
             title=data.title,
+            kicker=data.kicker,
+            ship_date=data.ship_date,
+            hero_image_path=data.hero_image_path,
+            hero_caption=data.hero_caption,
             sections=data.sections,
             footer_cta=data.footer_cta,
             created_at=now,
@@ -182,6 +252,14 @@ class ComposerService:
         if "title" in patch:
             # Empty string clears the explicit title (falls back to derived).
             existing.title = (patch["title"] or "").strip() or None
+        if "kicker" in patch:
+            existing.kicker = (patch["kicker"] or "").strip() or None
+        if "ship_date" in patch:
+            existing.ship_date = (patch["ship_date"] or "").strip() or None
+        if "hero_image_path" in patch:
+            existing.hero_image_path = patch["hero_image_path"] or None
+        if "hero_caption" in patch:
+            existing.hero_caption = (patch["hero_caption"] or "").strip() or None
         existing.updated_at = _now_iso()
         storage = get_storage()
         await storage.put(DRAFTS_TABLE, draft_id, _draft_to_row(existing))
@@ -217,6 +295,10 @@ class ComposerService:
             issue_number=issue_number,
             slug=slug,
             title=title,
+            kicker=draft.kicker,
+            ship_date=draft.ship_date,
+            hero_image_path=draft.hero_image_path,
+            hero_caption=draft.hero_caption,
             sections=draft.sections,
             footer_cta=draft.footer_cta,
             pdf_path=None,
@@ -264,6 +346,10 @@ class ComposerService:
             issue_number=issue_number,
             slug=f"issue-{issue_number:03d}",
             title=(draft.title or "").strip() or self._derive_title(draft.sections),
+            kicker=draft.kicker,
+            ship_date=draft.ship_date,
+            hero_image_path=draft.hero_image_path,
+            hero_caption=draft.hero_caption,
             sections=draft.sections,
             footer_cta=draft.footer_cta,
             pdf_path=None,
@@ -272,7 +358,17 @@ class ComposerService:
             recipient_count=None,
         )
         image, mime = await self._resolve_spotlight_image(draft.sections)
-        return build_email_html(preview, spotlight_image=image, spotlight_image_mime=mime)
+        hero, hero_mime = await self._resolve_hero_image(draft.hero_image_path)
+        spotlight_title = await self._resolve_spotlight_title(draft.sections)
+        return build_email_html(
+            preview,
+            spotlight_image=image,
+            spotlight_image_mime=mime,
+            hero_image=hero,
+            hero_image_mime=hero_mime,
+            booking_url=self._booking_url(),
+            spotlight_title=spotlight_title,
+        )
 
     async def _resolve_spotlight_image(
         self, sections: IssueSections
@@ -300,19 +396,97 @@ class ComposerService:
             logger.info("Spotlight image unavailable: %s", exc)
         return None, "image/png"
 
+    async def _resolve_spotlight_title(self, sections: IssueSections) -> Optional[str]:
+        """The selected POV's name, for the spotlight headline. Best-effort."""
+        pov_id = sections.use_case_spotlight.pov_id
+        if not pov_id:
+            return None
+        from app.services.pov_library import pov_library_service
+
+        try:
+            pov = await pov_library_service.get_pov(pov_id)
+            if pov and pov.name:
+                return pov.name
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Spotlight title unavailable: %s", exc)
+        return None
+
+    async def _resolve_hero_image(
+        self, hero_image_path: Optional[str]
+    ) -> tuple[Optional[bytes], str]:
+        """Load the hero image bytes + MIME from storage, if any. Best-effort."""
+        if not hero_image_path:
+            return None, "image/jpeg"
+        try:
+            data = await get_storage().get_file(hero_image_path)
+            ext = hero_image_path.rsplit(".", 1)[-1].lower()
+            mime = {
+                "png": "image/png",
+                "jpg": "image/jpeg",
+                "jpeg": "image/jpeg",
+                "webp": "image/webp",
+                "gif": "image/gif",
+            }.get(ext, "image/jpeg")
+            return data, mime
+        except Exception as exc:  # noqa: BLE001 — a missing hero must not break render
+            logger.info("Hero image unavailable: %s", exc)
+        return None, "image/jpeg"
+
+    @staticmethod
+    def _booking_url() -> str:
+        """The one-time-configured booking URL from user settings; default '#'."""
+        try:
+            from app.services.llm import get_user_settings
+
+            return (get_user_settings().get("booking_url") or "").strip() or "#"
+        except Exception:  # noqa: BLE001 — settings read must never break a render
+            return "#"
+
+    async def set_hero_image(
+        self, draft_id: str, data: bytes, filename: str
+    ) -> Optional[IssueDraft]:
+        """Persist an uploaded hero image and update the draft's hero_image_path.
+
+        Drafts have no slug yet, so the storage key is keyed by draft id under
+        hero_images/{draft_id}.{ext} (deviation from the spec's issues/{slug}/ path).
+        """
+        draft = await self.get_draft(draft_id)
+        if not draft:
+            return None
+        ext = (filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg")
+        if ext not in {"jpg", "jpeg", "png"}:
+            ext = "jpg"
+        rel = f"hero_images/{draft_id}.{ext}"
+        storage = get_storage()
+        await storage.store_file(rel, data)
+        draft.hero_image_path = rel
+        draft.updated_at = _now_iso()
+        await storage.put(DRAFTS_TABLE, draft_id, _draft_to_row(draft))
+        return draft
+
     async def _generate_exports(self, issue: SentIssue) -> tuple[str, str]:
         """Build the PDF + email HTML, persist them, return their storage paths."""
         # Imported lazily to keep module import order simple and side-effect free.
         from app.services.newsletter.exports import build_email_html, build_pdf
 
         spotlight_image, mime = await self._resolve_spotlight_image(issue.sections)
+        hero_image, hero_mime = await self._resolve_hero_image(issue.hero_image_path)
+        spotlight_title = await self._resolve_spotlight_title(issue.sections)
 
         month = issue.sent_at[:7] if len(issue.sent_at) >= 7 else "unknown"
         base = f"issues/{month}/{issue.slug}"
         pdf_rel = f"{base}/{issue.slug}.pdf"
         html_rel = f"{base}/{issue.slug}.html"
 
-        html = build_email_html(issue, spotlight_image=spotlight_image, spotlight_image_mime=mime)
+        html = build_email_html(
+            issue,
+            spotlight_image=spotlight_image,
+            spotlight_image_mime=mime,
+            hero_image=hero_image,
+            hero_image_mime=hero_mime,
+            booking_url=self._booking_url(),
+            spotlight_title=spotlight_title,
+        )
         storage = get_storage()
         await storage.store_file(pdf_rel, build_pdf(issue, spotlight_image))
         await storage.store_file(html_rel, html.encode("utf-8"))

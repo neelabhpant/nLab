@@ -222,6 +222,85 @@ async def test_mark_sent_falls_back_to_derived_title(service: ComposerService) -
     assert issue.title == "Agentic AI demands clean data"
 
 
+# ---------- Phase 8 Briefing fields ----------
+
+
+@pytest.mark.asyncio
+async def test_briefing_fields_roundtrip_create_update_get(service: ComposerService) -> None:
+    created = await service.create_draft(
+        IssueDraftCreate(
+            sections=_filled_sections(),
+            kicker="THE COST WALL",
+            ship_date="2026-06-09",
+            hero_caption="Inference cost curve",
+        )
+    )
+    assert created.kicker == "THE COST WALL"
+    assert created.ship_date == "2026-06-09"
+    assert created.hero_caption == "Inference cost curve"
+    assert created.hero_image_path is None
+
+    # Survive a storage round-trip.
+    reloaded = await service.get_draft(created.id)
+    assert reloaded is not None
+    assert reloaded.kicker == "THE COST WALL"
+    assert reloaded.ship_date == "2026-06-09"
+    assert reloaded.hero_caption == "Inference cost curve"
+
+    # Partial update touches only the supplied fields.
+    updated = await service.update_draft(
+        created.id, IssueDraftUpdate(kicker="FEATURE", hero_caption="Router pattern")
+    )
+    assert updated is not None
+    assert updated.kicker == "FEATURE"
+    assert updated.hero_caption == "Router pattern"
+    assert updated.ship_date == "2026-06-09"  # untouched
+
+    # Empty string clears kicker back to None (→ "FEATURE" default downstream).
+    cleared = await service.update_draft(created.id, IssueDraftUpdate(kicker="  "))
+    assert cleared is not None and cleared.kicker is None
+
+
+@pytest.mark.asyncio
+async def test_briefing_fields_survive_mark_sent(service: ComposerService) -> None:
+    draft = await service.create_draft(
+        IssueDraftCreate(
+            sections=_filled_sections(),
+            kicker="THE COST WALL",
+            ship_date="2027-01-12",
+            hero_caption="Cost curve",
+        )
+    )
+    issue = await service.mark_sent(draft.id)
+    assert issue is not None
+    assert issue.kicker == "THE COST WALL"
+    assert issue.ship_date == "2027-01-12"
+    assert issue.hero_caption == "Cost curve"
+
+    # And they survive the issue-table round-trip.
+    reloaded = await service.get_issue(issue.id)
+    assert reloaded is not None
+    assert reloaded.kicker == "THE COST WALL"
+    assert reloaded.ship_date == "2027-01-12"
+    assert reloaded.hero_caption == "Cost curve"
+
+
+@pytest.mark.asyncio
+async def test_set_hero_image_persists_path(service: ComposerService) -> None:
+    draft = await service.create_draft(IssueDraftCreate(sections=_filled_sections()))
+    updated = await service.set_hero_image(draft.id, b"\x89PNG\r\n\x1a\n" + b"0" * 32, "chart.png")
+    assert updated is not None
+    assert updated.hero_image_path == f"hero_images/{draft.id}.png"
+
+    reloaded = await service.get_draft(draft.id)
+    assert reloaded.hero_image_path == f"hero_images/{draft.id}.png"
+
+
+@pytest.mark.asyncio
+async def test_set_hero_image_missing_draft_returns_none(service: ComposerService) -> None:
+    assert await service.set_hero_image("draft-missing", b"x", "x.png") is None
+
+
 def test_slugify_title() -> None:
     from app.services.newsletter.exports import slugify
 

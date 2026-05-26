@@ -66,6 +66,10 @@ class IssueSections(BaseModel):
 class IssueDraftBase(BaseModel):
     issue_number: Optional[int] = None  # assigned at send-time
     title: Optional[str] = None  # editorial headline; falls back to derived if empty
+    kicker: Optional[str] = Field(default=None, max_length=30)  # mono accent label; default "FEATURE"
+    ship_date: Optional[str] = None  # ISO date string; drives Vol/No/Date in the masthead
+    hero_image_path: Optional[str] = None  # storage path of the uploaded hero image
+    hero_caption: Optional[str] = Field(default=None, max_length=120)  # FIG line caption
     sections: IssueSections = Field(default_factory=IssueSections)
     footer_cta: str = ""
 
@@ -78,6 +82,10 @@ class IssueDraftUpdate(BaseModel):
     """Partial update. Auto-save sends one of these per debounce tick."""
 
     title: Optional[str] = None
+    kicker: Optional[str] = Field(default=None, max_length=30)
+    ship_date: Optional[str] = None
+    hero_image_path: Optional[str] = None
+    hero_caption: Optional[str] = Field(default=None, max_length=120)
     sections: Optional[IssueSections] = None
     footer_cta: Optional[str] = None
 
@@ -109,6 +117,10 @@ class SentIssue(BaseModel):
     issue_number: int
     slug: str  # e.g. "issue-001"
     title: str  # derived from The Read or set explicitly
+    kicker: Optional[str] = None  # mono accent label; default "FEATURE"
+    ship_date: Optional[str] = None  # ISO date string
+    hero_image_path: Optional[str] = None
+    hero_caption: Optional[str] = None
     sections: IssueSections
     footer_cta: str
     pdf_path: Optional[str] = None

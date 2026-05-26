@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -12,10 +12,12 @@ import {
   ArrowLeft,
   Sparkles,
   Cpu,
+  ImagePlus,
+  X,
 } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
 import { useLayoutContext } from '@/shared/components/layout'
-import { newsletterApi, extractErrorMessage } from '@/shared/lib/newsletter-api'
+import { newsletterApi, extractErrorMessage, heroUrl } from '@/shared/lib/newsletter-api'
 import {
   useComposeStore,
   deriveTitle,
@@ -35,6 +37,15 @@ const SECTIONS: Array<{ key: ActiveSection; label: string }> = [
   { key: 'wins', label: 'Wins' },
   { key: 'horizon', label: 'On the Horizon' },
 ]
+
+/** ISO date (YYYY-MM-DD) of the next Tuesday from today, computed client-side. */
+function nextTuesdayISO(): string {
+  const d = new Date()
+  // 2 = Tuesday. Days until the next Tuesday (strictly future; today-if-Tuesday rolls a week).
+  const delta = ((2 - d.getDay() + 7) % 7) || 7
+  d.setDate(d.getDate() + delta)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function formatSavedAgo(iso: string | null, saving: boolean): string {
   if (saving) return 'Saving…'
@@ -65,6 +76,7 @@ export function ComposePage() {
     loadDraft,
     updateCurrentDraft,
     saveCurrentDraft,
+    uploadHero,
     sendDraft,
     setActiveSection,
     resetCurrentDraft,
@@ -77,6 +89,32 @@ export function ComposePage() {
   const [showSendModal, setShowSendModal] = useState(false)
   // Tick state so "saved Xs ago" refreshes without a hard reload.
   const [tick, setTick] = useState(0)
+
+  // Hero upload state.
+  const heroInputRef = useRef<HTMLInputElement>(null)
+  const [heroUploading, setHeroUploading] = useState(false)
+  const [heroError, setHeroError] = useState<string | null>(null)
+
+  const handleHeroFile = async (file: File | undefined) => {
+    if (!file) return
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setHeroError('JPEG or PNG only.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setHeroError('Max 5 MB.')
+      return
+    }
+    setHeroError(null)
+    setHeroUploading(true)
+    try {
+      await uploadHero(file)
+    } catch (err) {
+      setHeroError(extractErrorMessage(err, 'Hero upload failed'))
+    } finally {
+      setHeroUploading(false)
+    }
+  }
 
   // Preview modal state.
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
@@ -119,6 +157,14 @@ export function ComposePage() {
   useEffect(() => {
     return () => resetCurrentDraft()
   }, [resetCurrentDraft])
+
+  // Default ship date to the next Tuesday when a draft has none yet. Flows
+  // through the existing autosave like any other field edit.
+  useEffect(() => {
+    if (currentDraft && !currentDraft.ship_date) {
+      updateCurrentDraft({ ship_date: nextTuesdayISO() })
+    }
+  }, [currentDraft?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load the active generation model + voice-check mode for the header.
   useEffect(() => {
@@ -203,6 +249,126 @@ export function ComposePage() {
             <p className="mt-1 text-[11px] font-body text-slate-400">
               Doubles as the email subject. Leave blank to use the auto-generated headline.
             </p>
+          </div>
+
+          {/* Briefing metadata — kicker, ship date, hero image, hero caption. */}
+          <div className="mb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-display font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Kicker
+              </label>
+              <input
+                type="text"
+                maxLength={30}
+                value={currentDraft?.kicker ?? ''}
+                onChange={(e) => updateCurrentDraft({ kicker: e.target.value })}
+                placeholder="FEATURE"
+                disabled={!currentDraft}
+                className="w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm font-body uppercase tracking-wider text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+              />
+              <p className="mt-1 text-[11px] font-body text-slate-400">
+                Mono accent above the headline. Max 30 chars. Blank → FEATURE.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-display font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Ship date
+              </label>
+              <input
+                type="date"
+                value={currentDraft?.ship_date ?? ''}
+                onChange={(e) => updateCurrentDraft({ ship_date: e.target.value })}
+                disabled={!currentDraft}
+                className="w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm font-body text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+              />
+              <p className="mt-1 text-[11px] font-body text-slate-400">
+                Drives Vol · No · Date in the masthead. Defaults to next Tuesday.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-display font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Hero image
+              </label>
+              <input
+                ref={heroInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={(e) => void handleHeroFile(e.target.files?.[0])}
+              />
+              {currentDraft?.hero_image_path ? (
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-1 p-2">
+                  <img
+                    src={heroUrl(currentDraft.id)}
+                    alt="Hero preview"
+                    className="h-12 w-24 object-cover rounded border border-border"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-display font-medium text-slate-700 truncate">
+                      {currentDraft.hero_image_path.split('/').pop()}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => heroInputRef.current?.click()}
+                      disabled={heroUploading}
+                      className="text-[11px] font-display font-medium text-emerald-700 hover:text-emerald-900 disabled:opacity-50 cursor-pointer"
+                    >
+                      {heroUploading ? 'Uploading…' : 'Replace'}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateCurrentDraft({ hero_image_path: null })}
+                    title="Remove hero (collapses the slot)"
+                    className="text-slate-400 hover:text-loss cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => heroInputRef.current?.click()}
+                  disabled={!currentDraft || heroUploading}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    void handleHeroFile(e.dataTransfer.files?.[0])
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-surface-1 px-3 py-2.5 text-sm font-display font-medium text-slate-500 hover:border-emerald-400 hover:text-slate-900 disabled:opacity-50 cursor-pointer"
+                >
+                  {heroUploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ImagePlus className="w-4 h-4" />
+                  )}
+                  {heroUploading ? 'Uploading…' : 'Drag or click — JPEG/PNG, ≤5MB'}
+                </button>
+              )}
+              {heroError && (
+                <p className="mt-1 text-[11px] font-body text-loss">{heroError}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-display font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+                Hero caption
+              </label>
+              <input
+                type="text"
+                maxLength={120}
+                value={currentDraft?.hero_caption ?? ''}
+                onChange={(e) => updateCurrentDraft({ hero_caption: e.target.value })}
+                placeholder="Shown in the FIG line under the hero"
+                disabled={!currentDraft || !currentDraft?.hero_image_path}
+                className="w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm font-body text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 disabled:opacity-50"
+              />
+              <p className="mt-1 text-[11px] font-body text-slate-400">
+                Enabled once a hero exists. Max 120 chars.
+              </p>
+            </div>
           </div>
 
           {/* Top bar: title pill + actions */}

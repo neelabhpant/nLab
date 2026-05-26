@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
+import mimetypes
 import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
@@ -45,6 +46,10 @@ router = APIRouter(prefix="/newsletter", tags=["newsletter"])
 
 class SendDraftBody(BaseModel):
     recipient_count: Optional[int] = None
+
+
+MAX_HERO_BYTES = 5 * 1024 * 1024  # 5 MB
+ALLOWED_HERO_TYPES = {"image/jpeg", "image/png"}
 
 
 # ---------- Generation request shapes ----------
@@ -139,6 +144,47 @@ async def preview_draft(draft_id: str) -> HTMLResponse:
     if html is None:
         raise HTTPException(status_code=404, detail="Draft not found")
     return HTMLResponse(content=html)
+
+
+@router.post("/drafts/{draft_id}/hero", response_model=IssueDraft)
+async def upload_hero(draft_id: str, file: UploadFile = File(...)) -> IssueDraft:
+    """Upload a hero image (JPEG/PNG, ≤5MB) for a draft.
+
+    Drafts have no slug yet, so the storage key is keyed by draft id under
+    hero_images/{draft_id}.{ext} (deviation from the spec's issues/{slug}/ path).
+    """
+    if file.content_type not in ALLOWED_HERO_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported image type: {file.content_type}. Allowed: JPEG, PNG",
+        )
+    draft = await composer_service.get_draft(draft_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    data = await file.read()
+    if len(data) > MAX_HERO_BYTES:
+        raise HTTPException(status_code=400, detail="Hero image exceeds 5 MB limit")
+    updated = await composer_service.set_hero_image(draft_id, data, file.filename or "hero.jpg")
+    if not updated:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    return updated
+
+
+@router.get("/drafts/{draft_id}/hero")
+async def get_hero(draft_id: str) -> FileResponse:
+    """Serve the stored hero image for a draft."""
+    draft = await composer_service.get_draft(draft_id)
+    if not draft or not draft.hero_image_path:
+        raise HTTPException(status_code=404, detail="Hero image not found")
+    storage = get_storage()
+    try:
+        local_path = await storage.file_url(draft.hero_image_path)
+    except (ValueError, FileNotFoundError):
+        raise HTTPException(status_code=404, detail="Hero image not found")
+    if not Path(local_path).exists():
+        raise HTTPException(status_code=404, detail="Hero image not found")
+    media_type, _ = mimetypes.guess_type(local_path)
+    return FileResponse(path=local_path, media_type=media_type or "image/jpeg")
 
 
 @router.post("/drafts/{draft_id}/send", response_model=SentIssue)
