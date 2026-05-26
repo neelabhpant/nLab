@@ -31,6 +31,18 @@ def isolated_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LocalSt
     return backend
 
 
+def _fake_usage():
+    from app.models.newsletter import UsageInfo
+
+    return UsageInfo(
+        model="claude-sonnet-4-6",
+        model_label="Sonnet 4.6",
+        input_tokens=100,
+        output_tokens=50,
+        cost_usd=0.001,
+    )
+
+
 class FakeLLM(NewsletterLLMClient):
     """Stand-in client that records prompts and returns canned outputs."""
 
@@ -40,13 +52,13 @@ class FakeLLM(NewsletterLLMClient):
         self.generate_prompts: list[str] = []
         self.voice_inputs: list[str] = []
 
-    async def generate(self, prompt: str) -> str:  # type: ignore[override]
+    async def generate(self, prompt: str):  # type: ignore[override]
         self.generate_prompts.append(prompt)
-        return self.generate_text
+        return self.generate_text, _fake_usage()
 
-    async def voice_check(self, text: str, prompt_template: str) -> dict:  # type: ignore[override]
+    async def voice_check(self, text: str, prompt_template: str):  # type: ignore[override]
         self.voice_inputs.append(text)
-        return self.voice_payload
+        return self.voice_payload, _fake_usage()
 
 
 # ---------- Voice service ----------
@@ -124,7 +136,7 @@ async def test_prompt_substitution_includes_voice_rules_and_examples(
     monkeypatch.setattr(generation_module, "voice_service", service)
 
     gen = GenerationService()
-    out = await gen.generate_the_read(user_input="Topic seed: data unification.", issue_number=7)
+    out, _usage = await gen.generate_the_read(user_input="Topic seed: data unification.", issue_number=7)
     assert out == "output"
     assert len(fake.generate_prompts) == 1
     prompt = fake.generate_prompts[0]
@@ -144,7 +156,7 @@ async def test_voice_check_parses_clean_text(
     fake = FakeLLM(voice_payload={"violations": []})
     monkeypatch.setattr(generation_module, "newsletter_llm_client", fake)
     gen = GenerationService()
-    result = await gen.voice_check("Clean prose with no issues.")
+    result, _usage = await gen.voice_check("Clean prose with no issues.")
     assert result == {"violations": []}
     assert fake.voice_inputs == ["Clean prose with no issues."]
 
@@ -167,7 +179,7 @@ async def test_voice_check_catches_em_dash(
     )
     monkeypatch.setattr(generation_module, "newsletter_llm_client", fake)
     gen = GenerationService()
-    result = await gen.voice_check("Retailers blend data — and intent — into agents.")
+    result, _usage = await gen.voice_check("Retailers blend data — and intent — into agents.")
     assert len(result["violations"]) == 1
     assert result["violations"][0]["rule"] == 1
 
@@ -180,7 +192,7 @@ async def test_voice_check_empty_text_short_circuits(
     fake = FakeLLM(voice_payload={"violations": [{"rule": 1, "problematic_text": "x", "suggestion": "y"}]})
     monkeypatch.setattr(generation_module, "newsletter_llm_client", fake)
     gen = GenerationService()
-    result = await gen.voice_check("   \n  ")
+    result, _usage = await gen.voice_check("   \n  ")
     assert result == {"violations": []}
     # Should not have called the LLM at all.
     assert fake.voice_inputs == []

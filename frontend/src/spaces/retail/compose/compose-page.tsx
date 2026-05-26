@@ -11,6 +11,7 @@ import {
   Loader2,
   ArrowLeft,
   Sparkles,
+  Cpu,
 } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
 import { useLayoutContext } from '@/shared/components/layout'
@@ -67,6 +68,10 @@ export function ComposePage() {
     sendDraft,
     setActiveSection,
     resetCurrentDraft,
+    sessionCostUsd,
+    lastModelLabel,
+    generationModelLabel,
+    fetchComposerSettings,
   } = useComposeStore()
 
   const [showSendModal, setShowSendModal] = useState(false)
@@ -114,6 +119,11 @@ export function ComposePage() {
   useEffect(() => {
     return () => resetCurrentDraft()
   }, [resetCurrentDraft])
+
+  // Load the active generation model + voice-check mode for the header.
+  useEffect(() => {
+    void fetchComposerSettings()
+  }, [fetchComposerSettings])
 
   // Refresh the "saved Xs ago" label every 10 seconds.
   useEffect(() => {
@@ -210,6 +220,15 @@ export function ComposePage() {
                   <Check className="w-3.5 h-3.5" />
                 ) : null}
                 {status === 'error' ? 'Save failed — will retry' : savedLabel}
+              </div>
+              <div
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[11px] font-display font-medium"
+                title="Active newsletter model and cumulative LLM cost this composer session"
+              >
+                <Cpu className="w-3 h-3 text-cyan" />
+                <span>{lastModelLabel ?? generationModelLabel ?? '—'}</span>
+                <span className="text-slate-500">·</span>
+                <span className="tabular-nums">${sessionCostUsd.toFixed(2)} this session</span>
               </div>
             </div>
 

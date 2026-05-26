@@ -1,5 +1,6 @@
 import { useComposeStore } from '../stores/compose-store'
 import { AIAssistButton } from '../components/ai-assist-button'
+import { CheckVoiceButton } from '../components/check-voice-button'
 import { GenerationOverlay } from '../components/generation-overlay'
 import { VoiceWarningBanner } from '../components/voice-warning-banner'
 import { GenerationErrorToast } from '../components/generation-error-toast'
@@ -50,6 +51,7 @@ export function WinsEditor() {
 
       <div className="flex flex-wrap gap-2">
         <AIAssistButton label="Polish in voice" loading={isGenerating} onClick={handlePolish} />
+        <CheckVoiceButton section="wins" />
       </div>
 
       <VoiceWarningBanner

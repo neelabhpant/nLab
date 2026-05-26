@@ -27,8 +27,22 @@ export interface VoiceViolation {
   suggestion: string
 }
 
+export interface UsageInfo {
+  model: string
+  model_label: string
+  input_tokens: number
+  output_tokens: number
+  cost_usd: number
+}
+
+export interface GenResult {
+  content: string
+  usage: UsageInfo | null
+}
+
 export interface VoiceCheckResult {
   violations: VoiceViolation[]
+  usage: UsageInfo | null
 }
 
 export interface VoiceExample {
@@ -56,6 +70,7 @@ export interface VoiceExampleUpdate {
 
 interface GenerateResponse {
   content: string
+  usage: UsageInfo | null
 }
 
 /**
@@ -70,41 +85,41 @@ export function extractErrorMessage(err: unknown, fallback: string): string {
 }
 
 export const newsletterApi = {
-  async generateTheRead(userInput: string, issueNumber: number | null): Promise<string> {
+  async generateTheRead(userInput: string, issueNumber: number | null): Promise<GenResult> {
     const { data } = await api.post<GenerateResponse>('/newsletter/generate/the-read', {
       user_input: userInput,
       issue_number: issueNumber,
     })
-    return data.content
+    return { content: data.content, usage: data.usage }
   },
 
-  async generateWhatsMoving(userInput: string, issueNumber: number | null): Promise<string> {
+  async generateWhatsMoving(userInput: string, issueNumber: number | null): Promise<GenResult> {
     const { data } = await api.post<GenerateResponse>('/newsletter/generate/whats-moving', {
       user_input: userInput,
       issue_number: issueNumber,
     })
-    return data.content
+    return { content: data.content, usage: data.usage }
   },
 
   async generateUseCaseSpotlight(
     povId: string,
     userInput: string | null,
     tailoredForAccount: string | null,
-  ): Promise<string> {
+  ): Promise<GenResult> {
     const { data } = await api.post<GenerateResponse>('/newsletter/generate/use-case-spotlight', {
       pov_id: povId,
       user_input: userInput,
       tailored_for_account: tailoredForAccount,
     })
-    return data.content
+    return { content: data.content, usage: data.usage }
   },
 
-  async polish(userInput: string, sectionType: SectionKey | null = null): Promise<string> {
+  async polish(userInput: string, sectionType: SectionKey | null = null): Promise<GenResult> {
     const { data } = await api.post<GenerateResponse>('/newsletter/polish', {
       user_input: userInput,
       section_type: sectionType,
     })
-    return data.content
+    return { content: data.content, usage: data.usage }
   },
 
   async voiceCheck(text: string): Promise<VoiceCheckResult> {

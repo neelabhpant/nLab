@@ -1,5 +1,6 @@
 import { useComposeStore } from '../stores/compose-store'
 import { AIAssistButton } from '../components/ai-assist-button'
+import { CheckVoiceButton } from '../components/check-voice-button'
 import { GenerationOverlay } from '../components/generation-overlay'
 import { VoiceWarningBanner } from '../components/voice-warning-banner'
 import { GenerationErrorToast } from '../components/generation-error-toast'
@@ -80,6 +81,7 @@ export function TheReadEditor() {
           loading={isGenerating}
           onClick={handlePredictionConcrete}
         />
+        <CheckVoiceButton section="the_read" />
       </div>
 
       <VoiceWarningBanner

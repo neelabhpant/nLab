@@ -15,6 +15,23 @@ interface LlmSettings {
   has_anthropic_key: boolean
   has_groq_key: boolean
   provider_models: Record<string, string[]>
+  newsletter_generation_model: string
+  generation_model_choices: string[]
+  voice_check_mode: string
+  voice_check_modes: string[]
+}
+
+const MODEL_LABELS: Record<string, string> = {
+  'claude-opus-4-7': 'Opus 4.7',
+  'claude-opus-4-6': 'Opus 4.6',
+  'claude-sonnet-4-6': 'Sonnet 4.6',
+  'claude-haiku-4-5': 'Haiku 4.5',
+}
+
+const VOICE_MODE_LABELS: Record<string, string> = {
+  manual: 'Manual only',
+  auto_save: 'Auto on save',
+  auto_preview: 'Auto on final preview',
 }
 
 export function Settings() {
@@ -35,6 +52,8 @@ export function Settings() {
   const [showOpenaiKey, setShowOpenaiKey] = useState(false)
   const [showAnthropicKey, setShowAnthropicKey] = useState(false)
   const [showGroqKey, setShowGroqKey] = useState(false)
+  const [newsletterModel, setNewsletterModel] = useState('claude-sonnet-4-6')
+  const [voiceCheckMode, setVoiceCheckMode] = useState('manual')
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -44,6 +63,8 @@ export function Settings() {
       setOpenaiModel(data.openai_model)
       setAnthropicModel(data.anthropic_model)
       setGroqModel(data.groq_model)
+      setNewsletterModel(data.newsletter_generation_model)
+      setVoiceCheckMode(data.voice_check_mode)
     } catch {
       setError('Failed to load settings')
     } finally {
@@ -65,6 +86,8 @@ export function Settings() {
         openai_model: openaiModel,
         anthropic_model: anthropicModel,
         groq_model: groqModel,
+        newsletter_generation_model: newsletterModel,
+        voice_check_mode: voiceCheckMode,
       }
       if (openaiKey) payload.openai_api_key = openaiKey
       if (anthropicKey) payload.anthropic_api_key = anthropicKey
@@ -173,7 +196,7 @@ export function Settings() {
                     ))}
                   </select>
                   <p className="mt-1.5 text-xs font-body text-slate-500">
-                    Opus 4.7 is recommended for content generation tasks (newsletter, voice-tuned writing). Haiku is fine for tagging and utility tasks.
+                    Global model for Finance, Retail, Vault, and Labs features. The newsletter composer has its own model toggle (below).
                   </p>
                 </div>
                 <div>
@@ -187,6 +210,47 @@ export function Settings() {
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.08 }}
+              className="rounded-xl border border-border bg-surface-0 p-6 shadow-sm"
+            >
+              <h2 className="text-base font-display font-semibold text-slate-900 mb-4">Newsletter Composer</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-body text-slate-600 mb-1.5">Generation model</label>
+                  <select
+                    value={newsletterModel}
+                    onChange={(e) => setNewsletterModel(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
+                  >
+                    {(settings?.generation_model_choices ?? ['claude-sonnet-4-6', 'claude-opus-4-7']).map((m) => (
+                      <option key={m} value={m}>{MODEL_LABELS[m] ?? m}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-xs font-body text-slate-500">
+                    Model for section drafting/polish (The Read, What's Moving, Spotlight, Wins, Horizon). Sonnet 4.6 is the cost-efficient default; Opus 4.7 costs ~5× more. Voice check always runs on Haiku 4.5.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-body text-slate-600 mb-1.5">Voice check</label>
+                  <select
+                    value={voiceCheckMode}
+                    onChange={(e) => setVoiceCheckMode(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
+                  >
+                    {(settings?.voice_check_modes ?? ['manual', 'auto_save', 'auto_preview']).map((m) => (
+                      <option key={m} value={m}>{VOICE_MODE_LABELS[m] ?? m}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-xs font-body text-slate-500">
+                    Manual only (default) avoids an extra LLM call after every generation — use the "Check voice" button per section. Auto on save runs it after each generation.
+                  </p>
                 </div>
               </div>
             </motion.div>

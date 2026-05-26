@@ -16,15 +16,18 @@ from typing import Optional
 
 from anthropic import APIError, APIStatusError, AsyncAnthropic, BadRequestError, NotFoundError
 
+from app.models.newsletter import UsageInfo
 from app.services.llm import get_user_settings
 from app.services.newsletter.model_config import (
     GENERATION_MODEL,
     LLM_TIMEOUT_SECONDS,
     MAX_TOKENS_GENERATION,
     MAX_TOKENS_VOICE_CHECK,
+    MODEL_LABELS,
     TEMPERATURE_GENERATION,
     TEMPERATURE_VOICE_CHECK,
     VOICE_CHECK_MODEL,
+    cost_usd,
 )
 
 logger = logging.getLogger(__name__)
@@ -81,21 +84,28 @@ class NewsletterLLMClient:
         return self._client
 
     @staticmethod
-    def _user_anthropic_model() -> str:
+    def _generation_model() -> str:
+        """Resolve the newsletter generation model from user settings (toggle),
+        defaulting to GENERATION_MODEL (Sonnet 4.6)."""
+        s = get_user_settings()
+        return s.get("newsletter_generation_model") or GENERATION_MODEL
+
+    @staticmethod
+    def _fallback_model() -> str:
         s = get_user_settings()
         return s.get("anthropic_model") or GENERATION_MODEL
 
-    async def generate(self, prompt: str) -> str:
-        """Call Opus 4.7 for content generation. Fall back to the user's
-        configured Anthropic model if Opus is rejected."""
+    async def generate(self, prompt: str) -> tuple[str, UsageInfo]:
+        """Generate content with the user-selected newsletter model (default
+        Sonnet 4.6). Falls back to the global Anthropic model if rejected."""
         client = self._ensure_client()
-        primary = GENERATION_MODEL
-        fallback = self._user_anthropic_model()
+        primary = self._generation_model()
+        fallback = self._fallback_model()
 
         try:
-            text = await self._call(client, primary, prompt, MAX_TOKENS_GENERATION, TEMPERATURE_GENERATION)
+            text, usage = await self._call(client, primary, prompt, MAX_TOKENS_GENERATION, TEMPERATURE_GENERATION)
             logger.info("newsletter.generate model=%s ok", primary)
-            return text
+            return text, usage
         except Exception as exc:  # noqa: BLE001 — we want to discriminate below
             if _is_model_not_found(exc) and fallback and fallback != primary:
                 logger.warning(
@@ -103,22 +113,22 @@ class NewsletterLLMClient:
                     primary,
                     fallback,
                 )
-                text = await self._call(
+                text, usage = await self._call(
                     client, fallback, prompt, MAX_TOKENS_GENERATION, TEMPERATURE_GENERATION
                 )
                 logger.info("newsletter.generate model=%s ok (fallback)", fallback)
-                return text
+                return text, usage
             raise
 
-    async def voice_check(self, text: str, prompt_template: str) -> dict:
-        """Call Haiku for voice verification. Returns parsed JSON dict."""
+    async def voice_check(self, text: str, prompt_template: str) -> tuple[dict, UsageInfo]:
+        """Call Haiku for voice verification. Returns (parsed JSON, usage)."""
         client = self._ensure_client()
         prompt = prompt_template.replace("{user_input}", text)
-        raw = await self._call(
+        raw, usage = await self._call(
             client, VOICE_CHECK_MODEL, prompt, MAX_TOKENS_VOICE_CHECK, TEMPERATURE_VOICE_CHECK
         )
         logger.info("newsletter.voice_check model=%s ok", VOICE_CHECK_MODEL)
-        return _safe_json_load(raw)
+        return _safe_json_load(raw), usage
 
     async def _call(
         self,
@@ -127,7 +137,7 @@ class NewsletterLLMClient:
         prompt: str,
         max_tokens: int,
         temperature: float,
-    ) -> str:
+    ) -> tuple[str, UsageInfo]:
         start = time.perf_counter()
         kwargs: dict = {
             "model": model,
@@ -152,12 +162,23 @@ class NewsletterLLMClient:
         except (APIError, APIStatusError):
             raise
         elapsed_ms = int((time.perf_counter() - start) * 1000)
-        logger.info("newsletter.llm model=%s latency_ms=%d", model, elapsed_ms)
-        # content is a list of blocks; we treat text-only responses as the v1 contract.
-        if not response.content:
-            return ""
-        block = response.content[0]
-        return getattr(block, "text", "") or ""
+        in_tok = getattr(response.usage, "input_tokens", 0) or 0
+        out_tok = getattr(response.usage, "output_tokens", 0) or 0
+        usage = UsageInfo(
+            model=model,
+            model_label=MODEL_LABELS.get(model, model),
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            cost_usd=cost_usd(model, in_tok, out_tok),
+        )
+        logger.info(
+            "newsletter.llm model=%s latency_ms=%d in=%d out=%d cost=$%.4f",
+            model, elapsed_ms, in_tok, out_tok, usage.cost_usd,
+        )
+        text = ""
+        if response.content:
+            text = getattr(response.content[0], "text", "") or ""
+        return text, usage
 
 
 def _safe_json_load(raw: str) -> dict:

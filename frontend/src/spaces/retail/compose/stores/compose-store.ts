@@ -5,6 +5,7 @@ import {
   extractErrorMessage,
   type SectionKey,
   type VoiceViolation,
+  type UsageInfo,
 } from '@/shared/lib/newsletter-api'
 
 export type ActiveSection =
@@ -115,6 +116,16 @@ interface ComposeStore {
   generationError: Partial<Record<ActiveSection, string | null>>
   voiceWarnings: Partial<Record<ActiveSection, VoiceViolation[]>>
 
+  // Session cost tracking (resets per draft / composer load)
+  sessionCostUsd: number
+  sessionCalls: number
+  lastModelLabel: string | null
+
+  // Composer settings mirrored from the backend (for header + voice-check gating)
+  voiceCheckMode: string
+  generationModelLabel: string | null
+  fetchComposerSettings: () => Promise<void>
+
   createDraft: () => Promise<IssueDraft>
   loadDraft: (draftId: string) => Promise<void>
   updateCurrentDraft: (patch: DraftPatch) => void
@@ -135,6 +146,14 @@ interface ComposeStore {
   checkVoice: (section: ActiveSection) => Promise<void>
   dismissVoiceWarning: (section: ActiveSection) => void
   applyVoiceSuggestions: (section: ActiveSection) => Promise<void>
+}
+
+// Model id → short label for the composer header.
+const MODEL_LABELS: Record<string, string> = {
+  'claude-opus-4-7': 'Opus 4.7',
+  'claude-opus-4-6': 'Opus 4.6',
+  'claude-sonnet-4-6': 'Sonnet 4.6',
+  'claude-haiku-4-5': 'Haiku 4.5',
 }
 
 // Module-scoped debounce timer for auto-save.
@@ -162,6 +181,28 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
   generationError: {},
   voiceWarnings: {},
 
+  sessionCostUsd: 0,
+  sessionCalls: 0,
+  lastModelLabel: null,
+
+  voiceCheckMode: 'manual',
+  generationModelLabel: null,
+
+  async fetchComposerSettings() {
+    try {
+      const { data } = await api.get<{
+        newsletter_generation_model: string
+        voice_check_mode: string
+      }>('/settings')
+      set({
+        voiceCheckMode: data.voice_check_mode || 'manual',
+        generationModelLabel: MODEL_LABELS[data.newsletter_generation_model] ?? data.newsletter_generation_model,
+      })
+    } catch {
+      /* non-fatal — header just shows the last-used model instead */
+    }
+  },
+
   async createDraft() {
     set({ loading: true, error: null })
     try {
@@ -174,6 +215,9 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
         loading: false,
         lastSavedAt: data.updated_at,
         activeSection: 'the_read',
+        sessionCostUsd: 0,
+        sessionCalls: 0,
+        lastModelLabel: null,
       })
       return data
     } catch (err) {
@@ -192,6 +236,9 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
         loading: false,
         lastSavedAt: data.updated_at,
         activeSection: 'the_read',
+        sessionCostUsd: 0,
+        sessionCalls: 0,
+        lastModelLabel: null,
       })
     } catch (err) {
       const message =
@@ -314,6 +361,9 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
       generating: {},
       generationError: {},
       voiceWarnings: {},
+      sessionCostUsd: 0,
+      sessionCalls: 0,
+      lastModelLabel: null,
     })
   },
 
@@ -330,49 +380,56 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
 
     try {
       let content: string
+      let usage: UsageInfo | null = null
       switch (params.kind) {
-        case 'the_read':
-          content = await newsletterApi.generateTheRead(
-            params.userInput,
-            current.issue_number,
-          )
+        case 'the_read': {
+          const r = await newsletterApi.generateTheRead(params.userInput, current.issue_number)
+          content = r.content
+          usage = r.usage
           break
-        case 'whats_moving':
-          content = await newsletterApi.generateWhatsMoving(
-            params.userInput,
-            current.issue_number,
-          )
+        }
+        case 'whats_moving': {
+          const r = await newsletterApi.generateWhatsMoving(params.userInput, current.issue_number)
+          content = r.content
+          usage = r.usage
           break
-        case 'use_case_spotlight':
-          content = await newsletterApi.generateUseCaseSpotlight(
+        }
+        case 'use_case_spotlight': {
+          const r = await newsletterApi.generateUseCaseSpotlight(
             params.povId,
             params.userInput ?? null,
             params.tailoredForAccount ?? null,
           )
+          content = r.content
+          usage = r.usage
           break
+        }
         case 'polish': {
           const input = params.promptPrefix
             ? `${params.promptPrefix}\n\n${params.userInput}`
             : params.userInput
-          content = await newsletterApi.polish(input, section as SectionKey)
+          const r = await newsletterApi.polish(input, section as SectionKey)
+          content = r.content
+          usage = r.usage
           break
         }
       }
 
+      accumulateUsage(usage, set, get)
       applySectionContent(section, content, set, get)
 
-      // Auto voice-check after generation. Non-blocking on failure.
-      try {
-        const check = await newsletterApi.voiceCheck(content)
-        set({
-          voiceWarnings: { ...get().voiceWarnings, [section]: check.violations },
-        })
-      } catch (voiceErr) {
-        // Voice check is advisory only — log but don't surface.
-        console.warn('voice check failed', voiceErr)
-        set({
-          voiceWarnings: { ...get().voiceWarnings, [section]: [] },
-        })
+      // Voice check fires automatically only in auto_save mode. Default is manual
+      // (user clicks "Check voice"), which avoids a second LLM call per generation.
+      if (get().voiceCheckMode === 'auto_save') {
+        try {
+          const check = await newsletterApi.voiceCheck(content)
+          accumulateUsage(check.usage, set, get)
+          set({
+            voiceWarnings: { ...get().voiceWarnings, [section]: check.violations },
+          })
+        } catch (voiceErr) {
+          console.warn('voice check failed', voiceErr)
+        }
       }
     } catch (err) {
       const message = extractErrorMessage(err, 'Generation failed')
@@ -418,6 +475,7 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
     }
     try {
       const result = await newsletterApi.voiceCheck(text)
+      accumulateUsage(result.usage, set, get)
       set({
         voiceWarnings: { ...get().voiceWarnings, [section]: result.violations },
       })
@@ -458,7 +516,8 @@ ${currentContent}`
     })
 
     try {
-      const content = await newsletterApi.polish(userInput, section as SectionKey)
+      const { content, usage } = await newsletterApi.polish(userInput, section as SectionKey)
+      accumulateUsage(usage, set, get)
 
       // 1. Write the rewritten content back into the section (debounced auto-save fires).
       applySectionContent(section, content, set, get)
@@ -484,6 +543,20 @@ ${currentContent}`
     }
   },
 }))
+
+/** Accumulate a call's token cost into the running session total. */
+function accumulateUsage(
+  usage: UsageInfo | null,
+  set: (partial: Partial<ComposeStore>) => void,
+  get: () => ComposeStore,
+) {
+  if (!usage) return
+  set({
+    sessionCostUsd: get().sessionCostUsd + (usage.cost_usd || 0),
+    sessionCalls: get().sessionCalls + 1,
+    lastModelLabel: usage.model_label,
+  })
+}
 
 /**
  * Section content extractor — mirrors the structure that section editors use

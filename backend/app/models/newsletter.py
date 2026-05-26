@@ -92,6 +92,16 @@ class IssueDraft(IssueDraftBase):
     sent_at: Optional[str] = None
 
 
+class UsageInfo(BaseModel):
+    """Per-call token usage + estimated cost, for the composer cost display."""
+
+    model: str
+    model_label: str
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+
+
 class SentIssue(BaseModel):
     """A draft that has been marked as sent. Lives in newsletter_issues."""
 

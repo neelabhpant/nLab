@@ -56,6 +56,10 @@ def get_user_settings() -> dict:
         "openai_api_key": user.get("openai_api_key") or env.openai_api_key,
         "anthropic_api_key": user.get("anthropic_api_key") or env.anthropic_api_key,
         "groq_api_key": user.get("groq_api_key") or env.groq_api_key,
+        "newsletter_generation_model": user.get(
+            "newsletter_generation_model", env.newsletter_generation_model
+        ),
+        "voice_check_mode": user.get("voice_check_mode", env.voice_check_mode),
     }
 
 

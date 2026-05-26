@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # Newsletter Composer ("The Retail Read") — flag-gated build, see NEWSLETTER_COMPOSER_SPEC.md.
     # When False, Phase 4+ composer endpoints and UI surfaces stay dormant.
     newsletter_feature_enabled: bool = True
+    # Model for newsletter generation tasks (toggle in Settings). Voice check is
+    # always Haiku. Default Sonnet 4.6; Opus 4.7 is the higher-cost option.
+    newsletter_generation_model: str = "claude-sonnet-4-6"
+    # Voice-check trigger: "manual" | "auto_save" | "auto_preview". Default manual
+    # to avoid an LLM call after every generation.
+    voice_check_mode: str = "manual"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

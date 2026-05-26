@@ -1,5 +1,6 @@
 import { useComposeStore } from '../stores/compose-store'
 import { AIAssistButton } from '../components/ai-assist-button'
+import { CheckVoiceButton } from '../components/check-voice-button'
 import { GenerationOverlay } from '../components/generation-overlay'
 import { VoiceWarningBanner } from '../components/voice-warning-banner'
 import { GenerationErrorToast } from '../components/generation-error-toast'
@@ -56,6 +57,7 @@ export function HorizonEditor() {
       <div className="flex flex-wrap gap-2">
         <AIAssistButton label="Polish in voice" loading={isGenerating} onClick={handlePolish} />
         <AIAssistButton label="Add the ask" loading={isGenerating} onClick={handleAddAsk} />
+        <CheckVoiceButton section="horizon" />
       </div>
 
       <VoiceWarningBanner

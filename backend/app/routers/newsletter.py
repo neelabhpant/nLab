@@ -16,6 +16,7 @@ from app.models.newsletter import (
     IssueDraftCreate,
     IssueDraftUpdate,
     SentIssue,
+    UsageInfo,
 )
 from app.models.voice import (
     SECTION_TYPES,
@@ -76,6 +77,12 @@ class VoiceCheckBody(BaseModel):
 
 class GenerationResponse(BaseModel):
     content: str
+    usage: Optional[UsageInfo] = None
+
+
+class VoiceCheckResponse(BaseModel):
+    violations: list
+    usage: Optional[UsageInfo] = None
 
 
 def _llm_error(exc: Exception) -> HTTPException:
@@ -208,31 +215,26 @@ async def get_issue_slack(issue_id: str) -> GenerationResponse:
 
 @router.post("/generate/the-read", response_model=GenerationResponse)
 async def generate_the_read(body: GenerateTheReadBody) -> GenerationResponse:
-    start = time.perf_counter()
     try:
-        content = await generation_service.generate_the_read(body.user_input, body.issue_number)
+        content, usage = await generation_service.generate_the_read(body.user_input, body.issue_number)
     except Exception as exc:
         raise _llm_error(exc) from exc
-    logger.info("newsletter.endpoint=the-read latency_ms=%d", int((time.perf_counter() - start) * 1000))
-    return GenerationResponse(content=content)
+    return GenerationResponse(content=content, usage=usage)
 
 
 @router.post("/generate/whats-moving", response_model=GenerationResponse)
 async def generate_whats_moving(body: GenerateWhatsMovingBody) -> GenerationResponse:
-    start = time.perf_counter()
     try:
-        content = await generation_service.generate_whats_moving(body.user_input, body.issue_number)
+        content, usage = await generation_service.generate_whats_moving(body.user_input, body.issue_number)
     except Exception as exc:
         raise _llm_error(exc) from exc
-    logger.info("newsletter.endpoint=whats-moving latency_ms=%d", int((time.perf_counter() - start) * 1000))
-    return GenerationResponse(content=content)
+    return GenerationResponse(content=content, usage=usage)
 
 
 @router.post("/generate/use-case-spotlight", response_model=GenerationResponse)
 async def generate_use_case_spotlight(body: GenerateSpotlightBody) -> GenerationResponse:
-    start = time.perf_counter()
     try:
-        content = await generation_service.generate_use_case_spotlight(
+        content, usage = await generation_service.generate_use_case_spotlight(
             pov_id=body.pov_id,
             user_input=body.user_input,
             tailored_for_account=body.tailored_for_account,
@@ -241,30 +243,25 @@ async def generate_use_case_spotlight(body: GenerateSpotlightBody) -> Generation
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise _llm_error(exc) from exc
-    logger.info("newsletter.endpoint=spotlight latency_ms=%d", int((time.perf_counter() - start) * 1000))
-    return GenerationResponse(content=content)
+    return GenerationResponse(content=content, usage=usage)
 
 
 @router.post("/polish", response_model=GenerationResponse)
 async def polish(body: PolishBody) -> GenerationResponse:
-    start = time.perf_counter()
     try:
-        content = await generation_service.polish_in_voice(body.user_input, body.section_type)
+        content, usage = await generation_service.polish_in_voice(body.user_input, body.section_type)
     except Exception as exc:
         raise _llm_error(exc) from exc
-    logger.info("newsletter.endpoint=polish latency_ms=%d", int((time.perf_counter() - start) * 1000))
-    return GenerationResponse(content=content)
+    return GenerationResponse(content=content, usage=usage)
 
 
-@router.post("/voice-check", response_model=VoiceCheckResult)
-async def voice_check(body: VoiceCheckBody) -> VoiceCheckResult:
-    start = time.perf_counter()
+@router.post("/voice-check", response_model=VoiceCheckResponse)
+async def voice_check(body: VoiceCheckBody) -> VoiceCheckResponse:
     try:
-        result = await generation_service.voice_check(body.text)
+        result, usage = await generation_service.voice_check(body.text)
     except Exception as exc:
         raise _llm_error(exc) from exc
-    logger.info("newsletter.endpoint=voice-check latency_ms=%d", int((time.perf_counter() - start) * 1000))
-    return VoiceCheckResult(**result)
+    return VoiceCheckResponse(violations=result.get("violations", []), usage=usage)
 
 
 # ---------- Voice corpus CRUD ----------

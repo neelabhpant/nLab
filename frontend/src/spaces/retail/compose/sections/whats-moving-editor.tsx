@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRetailStore } from '@/spaces/retail/stores/retail-store'
 import { useComposeStore, type WhatsMovingItem } from '../stores/compose-store'
 import { AIAssistButton } from '../components/ai-assist-button'
+import { CheckVoiceButton } from '../components/check-voice-button'
 import { GenerationOverlay } from '../components/generation-overlay'
 import { VoiceWarningBanner } from '../components/voice-warning-banner'
 import { GenerationErrorToast } from '../components/generation-error-toast'
@@ -107,6 +108,7 @@ export function WhatsMovingEditor() {
           loading={isGenerating}
           onClick={handlePolishLines}
         />
+        <CheckVoiceButton section="whats_moving" />
       </div>
 
       <VoiceWarningBanner

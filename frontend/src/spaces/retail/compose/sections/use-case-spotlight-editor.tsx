@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useComposeStore } from '../stores/compose-store'
 import { AIAssistButton } from '../components/ai-assist-button'
+import { CheckVoiceButton } from '../components/check-voice-button'
 import { POVPicker } from '../components/pov-picker'
 import { GenerationOverlay } from '../components/generation-overlay'
 import { VoiceWarningBanner } from '../components/voice-warning-banner'
@@ -137,6 +138,7 @@ export function UseCaseSpotlightEditor() {
             </button>
           </div>
         )}
+        <CheckVoiceButton section="use_case_spotlight" />
       </div>
 
       <VoiceWarningBanner

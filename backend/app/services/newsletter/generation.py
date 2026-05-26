@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from app.models.newsletter import UsageInfo
 from app.models.voice import SectionType
 from app.services.newsletter.llm_client import (
     AnthropicNotConfigured,
@@ -51,34 +52,36 @@ class GenerationService:
         self,
         user_input: str,
         issue_number: Optional[int] = None,
-    ) -> str:
+    ) -> tuple[str, UsageInfo]:
         prompt = await self._build_prompt(
             template_name="the_read.txt",
             section_type="the_read",
             user_input=user_input,
             issue_number_or_pending=str(issue_number) if issue_number else "pending",
         )
-        return (await self.llm.generate(prompt)).strip()
+        text, usage = await self.llm.generate(prompt)
+        return text.strip(), usage
 
     async def generate_whats_moving(
         self,
         user_input: str,
         issue_number: Optional[int] = None,
-    ) -> str:
+    ) -> tuple[str, UsageInfo]:
         prompt = await self._build_prompt(
             template_name="whats_moving.txt",
             section_type="whats_moving",
             user_input=user_input,
             issue_number_or_pending=str(issue_number) if issue_number else "pending",
         )
-        return (await self.llm.generate(prompt)).strip()
+        text, usage = await self.llm.generate(prompt)
+        return text.strip(), usage
 
     async def generate_use_case_spotlight(
         self,
         pov_id: str,
         user_input: Optional[str] = None,
         tailored_for_account: Optional[str] = None,
-    ) -> str:
+    ) -> tuple[str, UsageInfo]:
         pov = await self.pov_lib.get_pov(pov_id)
         if not pov:
             raise ValueError(f"POV not found: {pov_id}")
@@ -96,9 +99,10 @@ class GenerationService:
             pov_ae_hook=pov.ae_hook,
             tailored_for_account=tailored_for_account or "none",
         )
-        return (await self.llm.generate(prompt)).strip()
+        text, usage = await self.llm.generate(prompt)
+        return text.strip(), usage
 
-    async def polish_section(self, section_type: SectionType, user_input: str) -> str:
+    async def polish_section(self, section_type: SectionType, user_input: str) -> tuple[str, UsageInfo]:
         """Section-aware polish — wins / horizon use their own templates so the
         bullet-count constraint stays in the prompt."""
         template_name = {
@@ -116,13 +120,14 @@ class GenerationService:
             # The wins / horizon templates don't use these, but the_read template might.
             issue_number_or_pending="pending",
         )
-        return (await self.llm.generate(prompt)).strip()
+        text, usage = await self.llm.generate(prompt)
+        return text.strip(), usage
 
     async def polish_in_voice(
         self,
         user_input: str,
         section_type: Optional[SectionType] = None,
-    ) -> str:
+    ) -> tuple[str, UsageInfo]:
         """Generic polish endpoint. Falls back to polish.txt when no section
         is supplied."""
         if section_type:
@@ -132,12 +137,14 @@ class GenerationService:
             section_type="the_read",  # any seed for few-shot; polish.txt is voice-only
             user_input=user_input,
         )
-        return (await self.llm.generate(prompt)).strip()
+        text, usage = await self.llm.generate(prompt)
+        return text.strip(), usage
 
-    async def voice_check(self, text: str) -> dict:
-        """Return {"violations": [...]}."""
+    async def voice_check(self, text: str) -> tuple[dict, Optional[UsageInfo]]:
+        """Return ({"violations": [...]}, usage). Usage is None when the text is
+        empty (no LLM call made)."""
         if not text.strip():
-            return {"violations": []}
+            return {"violations": []}, None
         return await self.llm.voice_check(text, self._voice_check_template)
 
     # ---------- internals ----------
