@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="format-detection" content="telephone=no,address=no,email=no,date=no">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>The Retail Read · Issue 01</title>
+
+<!-- ====================================================================
+     PREVIEW TEXT (the inbox snippet shown after the subject).
+     Pad with non-printing chars so other content doesn't leak in.
+     ==================================================================== -->
+<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;mso-hide:all;">
+  Uber burned $3.4B. Microsoft killed Claude Code. The retail wall is closer than it looks, and the fix is portfolio engineering, not bigger budgets.
+  &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
+</div>
+
+<!--[if mso]>
+<noscript>
+  <xml>
+    <o:OfficeDocumentSettings>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+      <o:AllowPNG/>
+    </o:OfficeDocumentSettings>
+  </xml>
+</noscript>
+<![endif]-->
+
+<!-- ====================================================================
+     WEBFONT LOADING (clients that allow <link> + @import).
+     Outlook desktop ignores webfonts; the inline font-family stacks below
+     fall back to Georgia / Helvetica / Arial automatically.
+     ==================================================================== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!--[if !mso]><!-->
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500;1,6..72,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!--<![endif]-->
+
+<style>
+  /* Client resets ----------------------------------------------------- */
+  body, table, td, p, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+  table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; border-collapse:collapse; }
+  img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; display:block; }
+  p { margin:0; padding:0; }
+  a { color:#F96302; text-decoration:none; }
+  .ExternalClass { width:100%; }
+  .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height:100%; }
+
+  /* RESPONSIVE — applies on mobile clients that honor @media (Gmail,
+     Apple Mail, Outlook iOS/Android, mobile webmail). Outlook desktop
+     ignores and gets the desktop layout. ------------------------------ */
+  @media only screen and (max-width: 480px) {
+    .rr-container       { width:100% !important; max-width:100% !important; }
+    .rr-pad             { padding-left:20px !important; padding-right:20px !important; }
+    .rr-col-stack       { display:block !important; width:100% !important; max-width:100% !important; padding-left:0 !important; padding-right:0 !important; }
+    .rr-col-stack-pad   { padding-left:20px !important; padding-right:20px !important; }
+    .rr-toc             { border-left:0 !important; padding-left:0 !important; padding-top:18px !important; margin-top:12px !important; border-top:1px solid #c6bba8 !important; }
+    .rr-mast            { font-size:44px !important; line-height:1.0 !important; }
+    .rr-h1              { font-size:32px !important; line-height:1.04 !important; letter-spacing:-1.2px !important; }
+    .rr-h2              { font-size:22px !important; line-height:1.18 !important; }
+    .rr-spot            { font-size:26px !important; line-height:1.08 !important; }
+    .rr-dropcap         { font-size:48px !important; padding-top:2px !important; }
+    .rr-numeral         { font-size:26px !important; }
+    .rr-pull            { font-size:18px !important; line-height:1.35 !important; }
+    .rr-stat-cell       { width:50% !important; display:inline-block !important; box-sizing:border-box; border-right:0 !important; border-bottom:1px solid #c6bba8 !important; }
+    .rr-stat-cell-last  { border-bottom:0 !important; }
+    .rr-move-cell       { width:100% !important; display:block !important; border-right:0 !important; border-bottom:1px solid #c6bba8 !important; padding:16px 0 !important; }
+    .rr-move-cell-last  { border-bottom:0 !important; }
+    .rr-event-cell      { width:100% !important; display:block !important; border-right:0 !important; padding:14px 0 !important; border-bottom:1px solid #c6bba8 !important; }
+    .rr-event-cell-last { border-bottom:0 !important; }
+    .rr-cta-cell        { display:block !important; width:100% !important; margin-bottom:10px !important; }
+    .rr-cta-cell-last   { margin-bottom:0 !important; }
+    .rr-colo-cell       { display:block !important; width:100% !important; text-align:left !important; padding:8px 0 !important; }
+    .rr-hide-mobile     { display:none !important; }
+    .rr-show-mobile     { display:block !important; max-height:none !important; overflow:visible !important; }
+    .rr-spot-img        { width:100% !important; height:auto !important; }
+  }
+
+  /* Dark-mode tweaks: clients that flip light → dark hit the inverted
+     surfaces hard. Keep the cream background. -------------------------- */
+  @media (prefers-color-scheme: dark) {
+    body, .rr-page, .rr-container { background:#f6f1e8 !important; color:#15110d !important; }
+  }
+  [data-ogsc] .rr-page, [data-ogsb] .rr-page { background:#f6f1e8 !important; color:#15110d !important; }
+</style>
+
+<!--[if mso]>
+<style>
+  /* Outlook desktop: force serif fallback so the layout doesn't get a
+     Times default that looks like a Word doc. */
+  .rr-serif      { font-family: Georgia, "Times New Roman", serif !important; }
+  .rr-sans       { font-family: Arial, Helvetica, sans-serif !important; }
+  .rr-mono       { font-family: Consolas, "Courier New", monospace !important; }
+  /* mso-specific spacing fixes */
+  table          { border-collapse: collapse !important; }
+</style>
+<![endif]-->
+</head>
+
+<body class="rr-page" style="margin:0;padding:0;background:#f6f1e8;color:#15110d;width:100%;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
+
+<!-- ====================================================================
+     PAGE WRAPPER — full-bleed cream background.
+     ==================================================================== -->
+<table role="presentation" class="rr-page" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f1e8" style="background:#f6f1e8;">
+<tr><td align="center" style="padding:0;">
+
+<!--[if mso | IE]>
+<table role="presentation" align="center" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td>
+<![endif]-->
+
+<!-- ====================================================================
+     INNER CONTAINER · 600px
+     ==================================================================== -->
+<table role="presentation" class="rr-container" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px;max-width:600px;margin:0 auto;background:#f6f1e8;">
+
+  <!-- ── 01 · TOP DARK STRIP ─────────────────────────────────────── -->
+  <tr><td bgcolor="#15110d" style="background:#15110d;padding:12px 24px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="rr-mono" align="left"
+            style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;line-height:1;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#f6f1e8;">
+          Vol.&nbsp;01 &nbsp;&middot;&nbsp; No.&nbsp;01 &nbsp;&middot;&nbsp; June&nbsp;16,&nbsp;2026
+        </td>
+        <td class="rr-sans" align="right"
+            style="font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-size:12px;line-height:1;letter-spacing:0.04em;font-weight:700;color:#f6f1e8;">
+          <!-- Cloudera mark · text + dot + ring (no logo asset) -->
+          <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#F96302;vertical-align:middle;margin-right:4px;">&nbsp;</span>CLOUDERA
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 02 · MASTHEAD ────────────────────────────────────────────── -->
+  <tr><td class="rr-pad" align="center" style="padding:28px 24px 6px;">
+    <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;line-height:1;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#5a4f43;margin:0 0 8px;">
+      A bi-weekly briefing on AI in retail
+    </p>
+    <p class="rr-serif rr-mast" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:48px;line-height:1.0;letter-spacing:-1.6px;font-weight:700;color:#15110d;margin:0 0 8px;">
+      The Retail&nbsp;<em style="font-style:italic;font-weight:500;">Read</em><span style="display:inline-block;width:7px;height:7px;background:#F96302;vertical-align:top;margin-left:3px;margin-top:6px;">&nbsp;</span>
+    </p>
+    <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;line-height:1.4;letter-spacing:0.16em;text-transform:uppercase;font-weight:600;color:#5a4f43;margin:0;">
+      Edited by Neelabh Pant &nbsp;&middot;&nbsp; Director, Global AI Industry Solutions, Retail &nbsp;&middot;&nbsp; Cloudera
+    </p>
+  </td></tr>
+
+  <!-- ── 03 · DOUBLE RULE ─────────────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:18px 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td height="4" style="line-height:4px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="4" style="line-height:4px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 04 · HEADLINE + IN THIS ISSUE ────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:22px 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <!-- Headline column ~360 -->
+        <td class="rr-col-stack" valign="top" width="360" style="width:360px;padding-right:16px;">
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;line-height:1;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#F96302;margin:0 0 10px;">
+            The cost wall &nbsp;&middot;&nbsp; Feature
+          </p>
+          <h1 class="rr-serif rr-h1" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:36px;line-height:1.04;letter-spacing:-1.2px;font-weight:700;color:#15110d;margin:0 0 10px;">
+            The AI cost crisis hits retail<em style="font-style:italic;font-weight:500;"> next.</em>
+          </h1>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;line-height:1.4;color:#5a4f43;font-style:italic;margin:0 0 14px;">
+            Uber burned $3.4&nbsp;billion. Microsoft killed Claude Code. The retail wall is closer than it looks, and the fix is portfolio engineering, not bigger budgets.
+          </p>
+          <p class="rr-sans" style="font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-size:12px;line-height:1.45;color:#5a4f43;margin:0;">
+            By <span style="color:#15110d;font-weight:600;border-bottom:1px solid #F96302;">Neelabh Pant</span>. &nbsp;6&nbsp;min&nbsp;read.
+          </p>
+        </td>
+
+        <!-- TOC column ~176 -->
+        <td class="rr-col-stack rr-toc" valign="top" width="176" style="width:176px;padding-left:18px;border-left:1px solid #c6bba8;">
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;line-height:1;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#15110d;margin:0 0 10px;">
+            In this issue
+          </p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="rr-sans"
+                 style="font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;">
+            <!-- TOC row template: each <tr> is one item -->
+            <tr><td style="padding:6px 0;border-bottom:1px dotted #c6bba8;font-size:12px;color:#15110d;font-weight:500;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F96302;margin-right:4px;">01</span> Two signals last week
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a4f43;float:right;letter-spacing:0.1em;">A1</span>
+            </td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px dotted #c6bba8;font-size:12px;color:#15110d;font-weight:500;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F96302;margin-right:4px;">02</span> Why retail is next
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a4f43;float:right;letter-spacing:0.1em;">A2</span>
+            </td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px dotted #c6bba8;font-size:12px;color:#15110d;font-weight:500;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F96302;margin-right:4px;">03</span> Portfolio engineering
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a4f43;float:right;letter-spacing:0.1em;">A3</span>
+            </td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px dotted #c6bba8;font-size:12px;color:#15110d;font-weight:500;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F96302;margin-right:4px;">04</span> Use case spotlight
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a4f43;float:right;letter-spacing:0.1em;">B1</span>
+            </td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px dotted #c6bba8;font-size:12px;color:#15110d;font-weight:500;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F96302;margin-right:4px;">05</span> What I&#39;m reading
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a4f43;float:right;letter-spacing:0.1em;">C1</span>
+            </td></tr>
+            <tr><td style="padding:6px 0;font-size:12px;color:#15110d;font-weight:500;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F96302;margin-right:4px;">06</span> Where I&#39;ll be
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a4f43;float:right;letter-spacing:0.1em;">C2</span>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 05 · HERO IMAGE ──────────────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:24px 24px 0;">
+    <!-- REPLACE: image at 1200x500 (2x of 600x250 displayed). Use PNG or
+         JPG. Recommended: a chart, system diagram, or muted abstract.
+         Avoid stock photography per editorial direction. -->
+    <img src="https://placehold.co/1200x500/f6f1e8/15110d/png?text=Inference+cost+curve+%C2%B7+Jan+2025+%E2%86%92+Jun+2026"
+         width="552" height="auto"
+         alt="Indexed inference cost, January 2025 to June 2026, illustrative"
+         style="display:block;width:100%;max-width:552px;height:auto;border:1px solid #c6bba8;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+      <tr>
+        <td class="rr-mono" align="left" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#5a4f43;font-weight:500;">
+          FIG &middot; 01 &nbsp;&middot;&nbsp; Inference cost curve
+        </td>
+        <td class="rr-mono" align="right" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#5a4f43;font-weight:500;">
+          Source &middot; illustrative
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 06 · LEDE (single-column in email; drop cap on lede) ─────── -->
+  <tr><td class="rr-pad" style="padding:24px 24px 0;">
+    <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;line-height:1.6;color:#15110d;margin:0;">
+      <span class="rr-serif rr-dropcap"
+            style="float:left;font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:58px;line-height:0.84;font-weight:700;color:#15110d;padding-right:8px;padding-top:6px;">U</span>ber disclosed roughly $3.4&nbsp;billion of AI spend across the past four reporting periods, then softened its self-driving language on the same call. Microsoft, in a separate move that got less coverage, sunset Claude&nbsp;Code from its commercial roadmap. The product was not failing. The math was. Both companies were running production AI at the scale most retailers will reach inside eighteen months, and both decided the unit economics no longer made sense. Retail is the next industry to feel this, and the answer is not a bigger budget. It is portfolio engineering.
+    </p>
+  </td></tr>
+
+  <!-- ── 07 · EDITOR'S NOTE ──────────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:24px 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="2" style="line-height:2px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+      <tr>
+        <td class="rr-col-stack" valign="top" width="110" style="width:110px;padding-right:18px;">
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;line-height:1.2;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#F96302;margin:0;">
+            From the desk
+          </p>
+        </td>
+        <td class="rr-col-stack" valign="top">
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;line-height:1.5;color:#15110d;margin:0;">
+            Two stories from last week keep nagging at me. Uber disclosed $3.4&nbsp;billion of AI spend in its filings and quietly walked back its self-driving ambitions. Microsoft cancelled Claude&nbsp;Code, citing margin pressure on a product that was, by every external measure, working. Two very different companies, one identical lesson. The cost of running AI at scale has finally caught up to the enthusiasm of building it. Retail is the next industry to feel it, and most of us are not ready. This issue is about why portfolio engineering, not bigger budgets, is the answer.
+          </p>
+        </td>
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="2" style="line-height:2px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 08 · FOUR MOVES (2x2 grid, stacks on mobile) ─────────────── -->
+  <tr><td class="rr-pad" style="padding:28px 24px 0;">
+    <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;line-height:1;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#15110d;margin:0 0 6px;">
+      Portfolio engineering &nbsp;&middot;&nbsp; Four moves
+    </p>
+    <h2 class="rr-serif rr-h2" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:24px;line-height:1.18;letter-spacing:-0.5px;font-weight:700;color:#15110d;margin:0 0 14px;">
+      Treat models like a portfolio with a cost of capital.
+    </h2>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:2px solid #15110d;">
+      <!-- Row 1: 01 / 02 -->
+      <tr>
+        <td class="rr-move-cell" valign="top" width="50%" style="width:50%;padding:16px 16px 16px 0;border-right:1px solid #c6bba8;border-bottom:1px solid #c6bba8;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td>
+              <span class="rr-serif rr-numeral" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:32px;line-height:1;letter-spacing:-0.8px;font-weight:600;font-style:italic;color:#F96302;margin-right:6px;">01</span>
+              <span class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:700;line-height:1.25;color:#15110d;">Anchor every model to a P&amp;L line.</span>
+            </td></tr>
+            <tr><td style="padding-top:8px;">
+              <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:14px;line-height:1.55;color:#15110d;margin:0;">
+                If the CFO cannot read the goal in fifteen seconds, the pilot will not survive Q3 review. &ldquo;Cut markdown by 80 basis points on soft lines&rdquo; outlives ten &ldquo;explore generative AI&rdquo; memos.
+              </p>
+            </td></tr>
+          </table>
+        </td>
+        <td class="rr-move-cell" valign="top" width="50%" style="width:50%;padding:16px 0 16px 16px;border-bottom:1px solid #c6bba8;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td>
+              <span class="rr-serif rr-numeral" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:32px;line-height:1;letter-spacing:-0.8px;font-weight:600;font-style:italic;color:#F96302;margin-right:6px;">02</span>
+              <span class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:700;line-height:1.25;color:#15110d;">Tier models like you tier inventory.</span>
+            </td></tr>
+            <tr><td style="padding-top:8px;">
+              <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:14px;line-height:1.55;color:#15110d;margin:0;">
+                A, B, C tiering by unit economics. A tier earns its inference. B tier is on a watchlist. C tier gets sunset or routed to a cheaper model. The merchandising team already thinks this way. Borrow the framework.
+              </p>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+      <!-- Row 2: 03 / 04 -->
+      <tr>
+        <td class="rr-move-cell" valign="top" width="50%" style="width:50%;padding:16px 16px 16px 0;border-right:1px solid #c6bba8;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td>
+              <span class="rr-serif rr-numeral" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:32px;line-height:1;letter-spacing:-0.8px;font-weight:600;font-style:italic;color:#F96302;margin-right:6px;">03</span>
+              <span class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:700;line-height:1.25;color:#15110d;">Cap inference by category, force the trade.</span>
+            </td></tr>
+            <tr><td style="padding-top:8px;">
+              <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:14px;line-height:1.55;color:#15110d;margin:0;">
+                Set a monthly inference budget per category and make teams compete inside it. Scarcity drives better architecture choices than abundance ever has.
+              </p>
+            </td></tr>
+          </table>
+        </td>
+        <td class="rr-move-cell rr-move-cell-last" valign="top" width="50%" style="width:50%;padding:16px 0 16px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td>
+              <span class="rr-serif rr-numeral" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:32px;line-height:1;letter-spacing:-0.8px;font-weight:600;font-style:italic;color:#F96302;margin-right:6px;">04</span>
+              <span class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:700;line-height:1.25;color:#15110d;">Treat agents like capex, not opex.</span>
+            </td></tr>
+            <tr><td style="padding-top:8px;">
+              <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:14px;line-height:1.55;color:#15110d;margin:0;">
+                Agents need a multi year ROI case. Programs that staff agents the way you staff a new store opening clear approvals in weeks. Programs that treat them as endpoints stall on liability review.
+              </p>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 09 · PULL QUOTE ──────────────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:28px 36px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td height="3" style="line-height:3px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="3" style="line-height:3px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+    <p class="rr-serif rr-pull" align="center"
+       style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-style:italic;font-size:21px;line-height:1.3;letter-spacing:-0.3px;color:#15110d;margin:18px 0;text-align:center;">
+      &ldquo;The retailers winning at AI are not the ones with the best models. They are the ones who decided, very early, which decisions a machine is allowed to make alone, and what each of those decisions is allowed to cost.&rdquo;
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td height="3" style="line-height:3px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="3" style="line-height:3px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 10 · USE CASE SPOTLIGHT ─────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:30px 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td align="left" class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#F96302;">
+          Use Case Spotlight &nbsp;&middot;&nbsp; B-section
+        </td>
+        <td align="right" class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;font-weight:500;color:#5a4f43;">
+          A top five North American grocer
+        </td>
+      </tr>
+    </table>
+    <h2 class="rr-serif rr-spot" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:28px;line-height:1.08;letter-spacing:-0.8px;font-weight:700;color:#15110d;margin:6px 0 14px;">
+      New Item Evaluation Platform
+    </h2>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="rr-col-stack" valign="top" width="270" style="width:270px;padding-right:14px;">
+          <!-- REPLACE: spotlight image. Native 1280x720 (16:9). Display
+               at 256px wide on desktop, full-bleed on mobile. Treatment
+               is a single 1px #c6bba8 border. No drop-shadow, no rounded
+               corners. See README §6 for guidance. -->
+          <img class="rr-spot-img"
+               src="https://placehold.co/1280x720/ece6d8/5a4f43/png?text=New+Item+Evaluation+Platform"
+               width="256" height="auto"
+               alt="New Item Evaluation Platform · system view"
+               style="display:block;width:100%;max-width:256px;height:auto;border:1px solid #c6bba8;">
+        </td>
+        <td class="rr-col-stack rr-col-stack-pad" valign="top">
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:15px;line-height:1.58;color:#15110d;margin:0;">
+            One of the cleanest cost stories I have seen this quarter. The merchant team gets a 14 day demand and margin forecast for any proposed new SKU in under three minutes, including a confidence interval and a recommended cannibalization adjustment. It runs on Cloudera, uses three lightweight models in a router pattern, and pays for its monthly run cost in two avoided product launches. The lesson is not the model. The lesson is the routing.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <!-- 4-stat strip -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;border-top:2px solid #15110d;border-bottom:2px solid #15110d;">
+      <tr>
+        <td class="rr-stat-cell" valign="top" width="25%" style="width:25%;padding:14px 10px 14px 0;border-right:1px solid #c6bba8;">
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:20px;line-height:1.05;letter-spacing:-0.4px;font-weight:700;color:#15110d;margin:0;">14 days</p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:500;color:#5a4f43;margin:6px 0 0;">forecast horizon</p>
+        </td>
+        <td class="rr-stat-cell" valign="top" width="25%" style="width:25%;padding:14px 10px;border-right:1px solid #c6bba8;">
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:20px;line-height:1.05;letter-spacing:-0.4px;font-weight:700;color:#15110d;margin:0;">&lt; 3 min</p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:500;color:#5a4f43;margin:6px 0 0;">response per SKU</p>
+        </td>
+        <td class="rr-stat-cell" valign="top" width="25%" style="width:25%;padding:14px 10px;border-right:1px solid #c6bba8;">
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:20px;line-height:1.05;letter-spacing:-0.4px;font-weight:700;color:#15110d;margin:0;">3 models</p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:500;color:#5a4f43;margin:6px 0 0;">router pattern</p>
+        </td>
+        <td class="rr-stat-cell rr-stat-cell-last" valign="top" width="25%" style="width:25%;padding:14px 0 14px 10px;">
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:20px;line-height:1.05;letter-spacing:-0.4px;font-weight:700;color:#15110d;margin:0;">2 launches</p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:500;color:#5a4f43;margin:6px 0 0;">to monthly payback</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 11 · WHAT I'M READING ───────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:30px 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="rr-mono" align="left" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#15110d;">What I&#39;m reading</td>
+        <td class="rr-mono" align="right" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;font-weight:500;color:#5a4f43;">Four links</td>
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
+      <tr><td height="2" style="line-height:2px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="2" style="line-height:2px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+    <!-- Reading rows -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #c6bba8;">
+          <a href="https://www.anthropic.com/engineering" style="text-decoration:none;color:#15110d;display:block;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="top" width="28" class="rr-serif" style="width:28px;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:20px;font-weight:600;line-height:1;color:#F96302;">1.</td>
+                <td valign="top">
+                  <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:600;line-height:1.25;color:#15110d;margin:0;">Pricing notes from the Claude Code retirement</p>
+                  <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#5a4f43;margin:4px 0 0;">Anthropic &nbsp;&middot;&nbsp; engineering.anthropic.com</p>
+                </td>
+                <td valign="top" align="right" class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;color:#5a4f43;width:46px;">8 min</td>
+              </tr>
+            </table>
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #c6bba8;">
+          <a href="https://investor.uber.com" style="text-decoration:none;color:#15110d;display:block;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="top" width="28" class="rr-serif" style="width:28px;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:20px;font-weight:600;line-height:1;color:#F96302;">2.</td>
+                <td valign="top">
+                  <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:600;line-height:1.25;color:#15110d;margin:0;">AI capex disclosure, Q3&nbsp;2026</p>
+                  <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#5a4f43;margin:4px 0 0;">Uber 10-Q &nbsp;&middot;&nbsp; investor.uber.com</p>
+                </td>
+                <td valign="top" align="right" class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;color:#5a4f43;width:46px;">12 min</td>
+              </tr>
+            </table>
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #c6bba8;">
+          <a href="https://arxiv.org" style="text-decoration:none;color:#15110d;display:block;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="top" width="28" class="rr-serif" style="width:28px;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:20px;font-weight:600;line-height:1;color:#F96302;">3.</td>
+                <td valign="top">
+                  <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:600;line-height:1.25;color:#15110d;margin:0;">Inference cost as a unit economic</p>
+                  <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#5a4f43;margin:4px 0 0;">arXiv &nbsp;&middot;&nbsp; arxiv.org/abs/2606.04421</p>
+                </td>
+                <td valign="top" align="right" class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;color:#5a4f43;width:46px;">24 min</td>
+              </tr>
+            </table>
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:12px 0;border-bottom:1px solid #c6bba8;">
+          <a href="https://corporate.walmart.com" style="text-decoration:none;color:#15110d;display:block;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="top" width="28" class="rr-serif" style="width:28px;font-family:Newsreader,Georgia,serif;font-style:italic;font-size:20px;font-weight:600;line-height:1;color:#F96302;">4.</td>
+                <td valign="top">
+                  <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;font-weight:600;line-height:1.25;color:#15110d;margin:0;">Earnings call language on agentic associates</p>
+                  <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#5a4f43;margin:4px 0 0;">Walmart &nbsp;&middot;&nbsp; corporate.walmart.com</p>
+                </td>
+                <td valign="top" align="right" class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;color:#5a4f43;width:46px;">5 min</td>
+              </tr>
+            </table>
+          </a>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 12 · WHERE I'LL BE (3-col, stacks on mobile) ────────────── -->
+  <tr><td class="rr-pad" style="padding:30px 24px 0;">
+    <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#15110d;margin:0 0 6px;">Where I&#39;ll be</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td height="2" style="line-height:2px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="2" style="line-height:2px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+      <tr>
+        <td class="rr-event-cell" valign="top" width="33.33%" style="width:33.33%;padding:0 12px 0 0;border-right:1px solid #c6bba8;">
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#F96302;margin:0 0 4px;">Jan&nbsp;13</p>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;line-height:1.2;font-weight:700;color:#15110d;margin:0;">NRF Big Show</p>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-style:italic;font-size:13px;line-height:1.35;color:#5a4f43;margin:4px 0 0;">Panel: AI cost models for retail</p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#5a4f43;margin:6px 0 0;">New York</p>
+        </td>
+        <td class="rr-event-cell" valign="top" width="33.33%" style="width:33.33%;padding:0 12px;border-right:1px solid #c6bba8;">
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#F96302;margin:0 0 4px;">Feb&nbsp;18</p>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;line-height:1.2;font-weight:700;color:#15110d;margin:0;">Cloudera SE Community</p>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-style:italic;font-size:13px;line-height:1.35;color:#5a4f43;margin:4px 0 0;">Portfolio engineering workshop</p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#5a4f43;margin:6px 0 0;">Internal &middot; virtual</p>
+        </td>
+        <td class="rr-event-cell rr-event-cell-last" valign="top" width="33.33%" style="width:33.33%;padding:0 0 0 12px;">
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#F96302;margin:0 0 4px;">May&nbsp;05</p>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-size:16px;line-height:1.2;font-weight:700;color:#15110d;margin:0;">Cloudera Evolve</p>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-style:italic;font-size:13px;line-height:1.35;color:#5a4f43;margin:4px 0 0;">Fireside on agentic retail</p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#5a4f43;margin:6px 0 0;">Las Vegas</p>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 13 · CTA BOX (dark) ─────────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:34px 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#15110d" style="background:#15110d;">
+      <tr><td style="padding:22px 22px 22px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="rr-cta-cell" valign="middle" width="46%" style="width:46%;padding-right:14px;">
+              <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#f6f1e8;margin:0 0 6px;">Two ways forward</p>
+              <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-style:italic;font-size:18px;line-height:1.3;color:#f6f1e8;margin:0;">
+                Reply with the part you disagree with. Or book thirty minutes on portfolio engineering for your retailer.
+              </p>
+            </td>
+            <td class="rr-cta-cell" valign="middle" width="27%" style="width:27%;padding-right:8px;">
+              <a href="mailto:neelabh.pant@cloudera.com?subject=Re%3A%20The%20Retail%20Read%20%C2%B7%20Issue%2001"
+                 style="display:block;text-decoration:none;border:1px solid #f6f1e8;padding:12px 14px;color:#f6f1e8;font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-weight:600;font-size:14px;line-height:1.3;">
+                <span class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#F96302;display:block;margin-bottom:4px;">Reply &rsaquo;</span>
+                Tell me where I am wrong.
+              </a>
+            </td>
+            <td class="rr-cta-cell rr-cta-cell-last" valign="middle" width="27%" style="width:27%;">
+              <a href="https://calendar.example.com/neelabh-pant/30min"
+                 style="display:block;text-decoration:none;background:#F96302;padding:12px 14px;color:#15110d;font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-weight:700;font-size:14px;line-height:1.3;">
+                <span class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#15110d;display:block;margin-bottom:4px;">Book &rsaquo;</span>
+                30 minutes, working session.
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- ── 14 · COLOPHON FOOTER ────────────────────────────────────── -->
+  <tr><td class="rr-pad" style="padding:34px 24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td height="3" style="line-height:3px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+      <tr><td height="3" style="line-height:3px;font-size:0;">&nbsp;</td></tr>
+      <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+      <tr>
+        <td class="rr-colo-cell" valign="top" width="40%" style="width:40%;">
+          <p class="rr-sans" style="font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-weight:700;font-size:13px;color:#15110d;margin:0 0 2px;">Neelabh Pant</p>
+          <p class="rr-sans" style="font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-size:12px;color:#5a4f43;line-height:1.4;margin:0;">Director, Global AI Industry Solutions, Retail</p>
+          <p class="rr-sans" style="font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-size:12px;color:#5a4f43;line-height:1.4;margin:0;">Cloudera</p>
+          <a href="mailto:neelabh.pant@cloudera.com"
+             class="rr-mono"
+             style="display:inline-block;margin-top:6px;font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:11px;letter-spacing:0.04em;color:#F96302;text-decoration:none;border-bottom:1px solid #F96302;">
+            neelabh.pant@cloudera.com
+          </a>
+        </td>
+        <td class="rr-colo-cell" valign="top" width="30%" align="center" style="width:30%;">
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#5a4f43;margin:0;">The Retail Read</p>
+          <p class="rr-serif" style="font-family:Newsreader,Georgia,'Times New Roman',serif;font-style:italic;font-size:13px;color:#15110d;margin:4px 0 0;">No.&nbsp;01 &nbsp;&middot;&nbsp; June&nbsp;16,&nbsp;2026</p>
+        </td>
+        <td class="rr-colo-cell" valign="top" width="30%" align="right" style="width:30%;">
+          <p class="rr-sans" style="font-family:'Plus Jakarta Sans',Arial,Helvetica,sans-serif;font-weight:700;font-size:12px;color:#15110d;margin:0 0 2px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F96302;vertical-align:middle;margin-right:4px;">&nbsp;</span>CLOUDERA
+          </p>
+          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9px;letter-spacing:0.06em;color:#5a4f43;margin:6px 0 0;line-height:1.4;">
+            Set in Newsreader<br>&amp; Plus Jakarta Sans
+          </p>
+        </td>
+      </tr>
+    </table>
+    <p class="rr-mono" align="center"
+       style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:#5a4f43;margin:28px 0 0;line-height:1.6;">
+      <a href="%%unsubscribe%%" style="color:#5a4f43;text-decoration:underline;">Unsubscribe</a>
+      &nbsp;&middot;&nbsp;
+      <a href="%%view_in_browser%%" style="color:#5a4f43;text-decoration:underline;">View in browser</a>
+      &nbsp;&middot;&nbsp;
+      <a href="%%forward%%" style="color:#5a4f43;text-decoration:underline;">Forward</a>
+    </p>
+  </td></tr>
+
+  <!-- ── BOTTOM PAD ──────────────────────────────────────────────── -->
+  <tr><td style="padding:24px 24px 36px;">&nbsp;</td></tr>
+
+</table>
+
+<!--[if mso | IE]>
+</td></tr></table>
+<![endif]-->
+
+</td></tr>
+</table>
+
+</body>
+</html>

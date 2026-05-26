@@ -29,3 +29,6 @@ demo_videos/
 .idea/
 *.swp
 *.swo
+
+# Design handoff: keep the extracted files; the raw zip delivery is a local-only archive
+design/design-b-briefing/_archive/
