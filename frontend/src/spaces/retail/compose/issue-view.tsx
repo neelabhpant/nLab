@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Loader2, FileDown, Code2, MessageSquare, Check } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
 import { useLayoutContext } from '@/shared/components/layout'
 import { useComposeStore, type SentIssue } from './stores/compose-store'
+import { newsletterApi, issuePdfUrl, issueHtmlUrl } from '@/shared/lib/newsletter-api'
 
 function formatDate(iso: string): string {
   try {
@@ -95,6 +96,7 @@ export function IssueView() {
                 <h1 className="text-2xl font-display font-bold text-slate-900 leading-tight">
                   {issue.title}
                 </h1>
+                <ExportToolbar issue={issue} />
               </header>
 
               <ReadOnlySection title="The Read">
@@ -167,6 +169,108 @@ export function IssueView() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function ExportToolbar({ issue }: { issue: SentIssue }) {
+  const [copied, setCopied] = useState<'slack' | 'html' | null>(null)
+  const [busy, setBusy] = useState<'slack' | 'html' | null>(null)
+
+  const flash = (which: 'slack' | 'html') => {
+    setCopied(which)
+    setTimeout(() => setCopied((c) => (c === which ? null : c)), 2000)
+  }
+
+  const copySlack = async () => {
+    setBusy('slack')
+    try {
+      const text = await newsletterApi.getSlackText(issue.id)
+      await navigator.clipboard.writeText(text)
+      flash('slack')
+    } catch {
+      /* clipboard or network failure — silent; user can retry */
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const copyHtml = async () => {
+    setBusy('html')
+    try {
+      const htmlText = await newsletterApi.getEmailHtml(issue.id)
+      // Prefer rich clipboard so pasting into Outlook/Gmail yields the rendered
+      // email; fall back to copying the source text.
+      try {
+        const item = new ClipboardItem({
+          'text/html': new Blob([htmlText], { type: 'text/html' }),
+          'text/plain': new Blob([htmlText], { type: 'text/plain' }),
+        })
+        await navigator.clipboard.write([item])
+      } catch {
+        await navigator.clipboard.writeText(htmlText)
+      }
+      flash('html')
+    } catch {
+      /* silent */
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const btn =
+    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-display font-medium border transition-colors cursor-pointer'
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-4">
+      <a
+        href={issuePdfUrl(issue.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${btn} border-slate-300 bg-surface-0 text-slate-700 hover:border-amber-400 hover:text-amber-800`}
+      >
+        <FileDown className="w-3.5 h-3.5" />
+        Download PDF
+      </a>
+      <a
+        href={issueHtmlUrl(issue.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${btn} border-slate-300 bg-surface-0 text-slate-700 hover:border-amber-400 hover:text-amber-800`}
+      >
+        <FileDown className="w-3.5 h-3.5" />
+        Download HTML
+      </a>
+      <button
+        type="button"
+        onClick={copyHtml}
+        disabled={busy === 'html'}
+        className={`${btn} border-slate-300 bg-surface-0 text-slate-700 hover:border-amber-400 hover:text-amber-800 disabled:opacity-50`}
+      >
+        {busy === 'html' ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : copied === 'html' ? (
+          <Check className="w-3.5 h-3.5 text-emerald-600" />
+        ) : (
+          <Code2 className="w-3.5 h-3.5" />
+        )}
+        {copied === 'html' ? 'Copied for email' : 'Copy HTML (email)'}
+      </button>
+      <button
+        type="button"
+        onClick={copySlack}
+        disabled={busy === 'slack'}
+        className={`${btn} border-slate-300 bg-surface-0 text-slate-700 hover:border-amber-400 hover:text-amber-800 disabled:opacity-50`}
+      >
+        {busy === 'slack' ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : copied === 'slack' ? (
+          <Check className="w-3.5 h-3.5 text-emerald-600" />
+        ) : (
+          <MessageSquare className="w-3.5 h-3.5" />
+        )}
+        {copied === 'slack' ? 'Copied for Slack' : 'Copy for Slack'}
+      </button>
     </div>
   )
 }

@@ -8,6 +8,7 @@ This service bundles/unbundles between Pydantic models and that storage shape.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -21,9 +22,20 @@ from app.models.newsletter import (
 )
 from app.services.storage import get_storage
 
+logger = logging.getLogger(__name__)
+
 
 DRAFTS_TABLE = "newsletter_drafts"
 ISSUES_TABLE = "newsletter_issues"
+
+# Sections harvested into the voice corpus on send, with the text to extract.
+_HARVEST_SECTIONS: tuple[str, ...] = (
+    "the_read",
+    "whats_moving",
+    "use_case_spotlight",
+    "wins",
+    "horizon",
+)
 
 
 def _now_iso() -> str:
@@ -206,10 +218,73 @@ class ComposerService:
             recipient_count=recipient_count,
         )
 
+        # Generate + persist export artifacts (PDF, HTML). Resilient: a failure
+        # here must not block the send — the issue still moves to the archive.
+        try:
+            pdf_path, html_path = await self._generate_exports(issue)
+            issue.pdf_path = pdf_path
+            issue.html_path = html_path
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Export generation failed for %s: %s", slug, exc)
+
         storage = get_storage()
         await storage.put(ISSUES_TABLE, issue.id, _issue_to_row(issue))
         await storage.delete(DRAFTS_TABLE, draft_id)
+
+        # Harvest the shipped sections into the voice corpus (spec §5.4).
+        try:
+            await self._harvest_voice_examples(issue)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Voice corpus harvest failed for %s: %s", slug, exc)
+
         return issue
+
+    async def _generate_exports(self, issue: SentIssue) -> tuple[str, str]:
+        """Build the PDF + email HTML, persist them, return their storage paths."""
+        # Imported lazily to keep module import order simple and side-effect free.
+        from app.services.newsletter.exports import build_email_html, build_pdf
+        from app.services.pov_library import pov_library_service
+
+        # Resolve an inline spotlight image if the picked POV has one.
+        spotlight_image: Optional[bytes] = None
+        pov_id = issue.sections.use_case_spotlight.pov_id
+        if pov_id:
+            try:
+                pov = await pov_library_service.get_pov(pov_id)
+                if pov and pov.demo_screenshot_path:
+                    spotlight_image = await get_storage().get_file(pov.demo_screenshot_path)
+            except Exception as exc:  # noqa: BLE001
+                logger.info("Spotlight image unavailable for %s: %s", issue.slug, exc)
+
+        month = issue.sent_at[:7] if len(issue.sent_at) >= 7 else "unknown"
+        base = f"issues/{month}/{issue.slug}"
+        pdf_rel = f"{base}/{issue.slug}.pdf"
+        html_rel = f"{base}/{issue.slug}.html"
+
+        storage = get_storage()
+        await storage.store_file(pdf_rel, build_pdf(issue, spotlight_image))
+        await storage.store_file(html_rel, build_email_html(issue).encode("utf-8"))
+        return pdf_rel, html_rel
+
+    async def _harvest_voice_examples(self, issue: SentIssue) -> None:
+        """Write each non-empty shipped section into the voice corpus."""
+        from app.services.newsletter.voice import voice_service
+
+        s = issue.sections
+        section_text: dict[str, str] = {
+            "the_read": s.the_read.content.strip(),
+            "whats_moving": "\n".join(
+                i.line.strip() for i in s.whats_moving.items if i.line and i.line.strip()
+            ),
+            "use_case_spotlight": s.use_case_spotlight.content.strip(),
+            "wins": "\n".join(w.strip() for w in s.wins.items if w and w.strip()),
+            "horizon": "\n".join(h.strip() for h in s.horizon.items if h and h.strip()),
+        }
+        source = f"Issue {issue.issue_number:03d}"
+        for section_type in _HARVEST_SECTIONS:
+            text = section_text.get(section_type, "")
+            if text:
+                await voice_service.add_published_example(section_type, text, source=source)
 
     async def list_issues(self) -> list[SentIssue]:
         """All sent issues, newest first by sent_at."""

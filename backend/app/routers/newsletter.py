@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.models.newsletter import (
@@ -24,12 +26,14 @@ from app.models.voice import (
     VoiceExampleUpdate,
 )
 from app.services.newsletter.composer import composer_service
+from app.services.newsletter.exports import build_slack_text
 from app.services.newsletter.generation import (
     AnthropicNotConfigured,
     GenerationTimeout,
     generation_service,
 )
 from app.services.newsletter.voice import voice_service
+from app.services.storage import get_storage
 
 
 logger = logging.getLogger(__name__)
@@ -145,6 +149,47 @@ async def get_issue(issue_id: str) -> SentIssue:
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found")
     return issue
+
+
+# ---------- Exports (spec §8) ----------
+
+
+async def _serve_stored_file(rel_path: Optional[str], media_type: str, download_name: str) -> FileResponse:
+    if not rel_path:
+        raise HTTPException(status_code=404, detail="Export not found")
+    storage = get_storage()
+    try:
+        local_path = await storage.file_url(rel_path)
+    except (ValueError, FileNotFoundError):
+        raise HTTPException(status_code=404, detail="Export not found")
+    if not Path(local_path).exists():
+        raise HTTPException(status_code=404, detail="Export not found")
+    return FileResponse(path=local_path, media_type=media_type, filename=download_name)
+
+
+@router.get("/issues/{issue_id}/pdf")
+async def download_issue_pdf(issue_id: str) -> FileResponse:
+    issue = await composer_service.get_issue(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return await _serve_stored_file(issue.pdf_path, "application/pdf", f"{issue.slug}.pdf")
+
+
+@router.get("/issues/{issue_id}/html")
+async def download_issue_html(issue_id: str) -> FileResponse:
+    issue = await composer_service.get_issue(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return await _serve_stored_file(issue.html_path, "text/html", f"{issue.slug}.html")
+
+
+@router.get("/issues/{issue_id}/slack", response_model=GenerationResponse)
+async def get_issue_slack(issue_id: str) -> GenerationResponse:
+    """Slack-formatted text, generated on demand from the issue's sections."""
+    issue = await composer_service.get_issue(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return GenerationResponse(content=build_slack_text(issue))
 
 
 # ---------- Generation ----------

@@ -1,4 +1,18 @@
-import { api } from './api'
+import { api, API_BASE, getAuthQueryParam } from './api'
+
+/** Authenticated download URL for an issue's PDF (token in query for <a download>). */
+export function issuePdfUrl(issueId: string): string {
+  const sep = API_BASE.includes('?') ? '&' : '?'
+  const auth = getAuthQueryParam()
+  return `${API_BASE}/newsletter/issues/${issueId}/pdf${auth ? `${sep}${auth}` : ''}`
+}
+
+/** Authenticated download URL for an issue's email HTML. */
+export function issueHtmlUrl(issueId: string): string {
+  const sep = API_BASE.includes('?') ? '&' : '?'
+  const auth = getAuthQueryParam()
+  return `${API_BASE}/newsletter/issues/${issueId}/html${auth ? `${sep}${auth}` : ''}`
+}
 
 export type SectionKey =
   | 'the_read'
@@ -96,6 +110,19 @@ export const newsletterApi = {
   async voiceCheck(text: string): Promise<VoiceCheckResult> {
     const { data } = await api.post<VoiceCheckResult>('/newsletter/voice-check', { text })
     return data
+  },
+
+  // ---------- Exports ----------
+
+  async getSlackText(issueId: string): Promise<string> {
+    const { data } = await api.get<{ content: string }>(`/newsletter/issues/${issueId}/slack`)
+    return data.content
+  },
+
+  /** Email HTML source, used for the "Copy HTML" clipboard action. */
+  async getEmailHtml(issueId: string): Promise<string> {
+    const { data } = await api.get(`/newsletter/issues/${issueId}/html`, { responseType: 'text' })
+    return data as string
   },
 
   // ---------- Voice corpus CRUD ----------

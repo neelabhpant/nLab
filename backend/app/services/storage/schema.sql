@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS voice_examples (
   example_text TEXT NOT NULL,
   source TEXT,
   notes TEXT,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  from_published_issue INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS distribution_lists (

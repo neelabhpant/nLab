@@ -57,8 +57,27 @@ class LocalStorageBackend(StorageBackend):
         schema_sql = SCHEMA_PATH.read_text()
         async with aiosqlite.connect(str(self.db_path)) as db:
             await db.executescript(schema_sql)
+            await self._apply_migrations(db)
             await db.commit()
         self._initialised = True
+
+    @staticmethod
+    async def _apply_migrations(db: aiosqlite.Connection) -> None:
+        """Idempotent column adds for tables that predate a column.
+
+        `CREATE TABLE IF NOT EXISTS` does not alter an existing table, so a
+        column added to schema.sql after a table already exists needs an
+        explicit ALTER. Each guard checks PRAGMA table_info first.
+        """
+        migrations: list[tuple[str, str, str]] = [
+            # (table, column, column definition)
+            ("voice_examples", "from_published_issue", "INTEGER DEFAULT 0"),
+        ]
+        for table, column, definition in migrations:
+            cur = await db.execute(f"PRAGMA table_info({table})")
+            cols = {row[1] for row in await cur.fetchall()}
+            if column not in cols:
+                await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     @staticmethod
     def _table_meta(table: str) -> dict:

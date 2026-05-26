@@ -93,6 +93,30 @@ class VoiceService:
         await storage.delete(TABLE, example_id)
         return True
 
+    async def add_published_example(
+        self,
+        section_type: SectionType,
+        example_text: str,
+        source: Optional[str] = None,
+    ) -> VoiceExample:
+        """Add an example harvested from a shipped issue (spec §5.4).
+
+        Flagged from_published_issue=True so it is preferred in few-shot
+        selection over seed examples.
+        """
+        row = {
+            "id": _new_id(section_type),
+            "section_type": section_type,
+            "example_text": example_text,
+            "source": source,
+            "notes": None,
+            "created_at": _now_iso(),
+            "from_published_issue": 1,
+        }
+        storage = get_storage()
+        await storage.put(TABLE, row["id"], row)
+        return VoiceExample(**row)
+
     async def get_few_shot_examples(
         self,
         section_type: SectionType,
@@ -100,10 +124,14 @@ class VoiceService:
     ) -> list[str]:
         """Return just the example_text strings, ready for prompt injection.
 
-        Phase 5: orders by created_at desc (newer wins). Phase 6 will introduce
-        from_published_issue and prefer those.
+        Published examples (from shipped issues) are preferred over seed
+        examples; within each group, newer wins (spec §5.4).
         """
         examples = await self.list_examples(section_type=section_type)
+        examples.sort(
+            key=lambda e: (1 if e.from_published_issue else 0, e.created_at),
+            reverse=True,
+        )
         return [e.example_text for e in examples[:limit]]
 
     async def seed_from_file(self, seed_path: str | Path) -> int:

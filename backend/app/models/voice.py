@@ -35,6 +35,7 @@ class VoiceExampleUpdate(BaseModel):
 class VoiceExample(VoiceExampleBase):
     id: str
     created_at: str
+    from_published_issue: bool = False
 
 
 class VoiceViolation(BaseModel):
