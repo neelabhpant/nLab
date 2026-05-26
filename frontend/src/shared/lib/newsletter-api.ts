@@ -125,6 +125,12 @@ export const newsletterApi = {
     return data as string
   },
 
+  /** Email HTML for an in-progress draft, for the composer Preview. */
+  async previewDraftHtml(draftId: string): Promise<string> {
+    const { data } = await api.get(`/newsletter/drafts/${draftId}/preview`, { responseType: 'text' })
+    return data as string
+  },
+
   // ---------- Voice corpus CRUD ----------
 
   async listVoiceExamples(sectionType?: SectionKey): Promise<VoiceExample[]> {

@@ -239,6 +239,33 @@ class ComposerService:
 
         return issue
 
+    async def render_draft_preview(self, draft_id: str) -> Optional[str]:
+        """Build the email HTML for an in-progress draft, for the composer Preview.
+
+        Reuses the email export builder so the preview matches the shipped
+        artifact exactly. The issue number shown is the one this draft would be
+        assigned on send (its own, or the next sequential).
+        """
+        from app.services.newsletter.exports import build_email_html
+
+        draft = await self.get_draft(draft_id)
+        if not draft:
+            return None
+        issue_number = draft.issue_number or await self._next_issue_number()
+        preview = SentIssue(
+            id=draft.id,
+            issue_number=issue_number,
+            slug=f"issue-{issue_number:03d}",
+            title=self._derive_title(draft.sections),
+            sections=draft.sections,
+            footer_cta=draft.footer_cta,
+            pdf_path=None,
+            html_path=None,
+            sent_at=_now_iso(),
+            recipient_count=None,
+        )
+        return build_email_html(preview)
+
     async def _generate_exports(self, issue: SentIssue) -> tuple[str, str]:
         """Build the PDF + email HTML, persist them, return their storage paths."""
         # Imported lazily to keep module import order simple and side-effect free.

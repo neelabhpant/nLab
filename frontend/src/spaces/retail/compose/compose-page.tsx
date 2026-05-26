@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { TopHeader } from '@/shared/components/top-header'
 import { useLayoutContext } from '@/shared/components/layout'
+import { newsletterApi, extractErrorMessage } from '@/shared/lib/newsletter-api'
 import {
   useComposeStore,
   deriveTitle,
@@ -71,6 +72,28 @@ export function ComposePage() {
   const [showSendModal, setShowSendModal] = useState(false)
   // Tick state so "saved Xs ago" refreshes without a hard reload.
   const [tick, setTick] = useState(0)
+
+  // Preview modal state.
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+
+  const handlePreview = async () => {
+    if (!currentDraft) return
+    setPreviewLoading(true)
+    setPreviewError(null)
+    try {
+      // Flush any pending edits so the preview reflects the latest content.
+      await saveCurrentDraft()
+      const html = await newsletterApi.previewDraftHtml(currentDraft.id)
+      setPreviewHtml(html)
+    } catch (err) {
+      setPreviewError(extractErrorMessage(err, 'Preview failed'))
+      setPreviewHtml('')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -173,11 +196,12 @@ export function ComposePage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                disabled
-                title="Available in Phase 6"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-dashed border-slate-300 bg-surface-0 text-sm font-display font-medium text-slate-500 opacity-60 cursor-not-allowed"
+                onClick={handlePreview}
+                disabled={!currentDraft || previewLoading}
+                title="Preview the assembled issue"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-surface-0 text-sm font-display font-medium text-slate-700 hover:border-slate-400 hover:text-slate-900 disabled:opacity-50 transition-colors cursor-pointer"
               >
-                <Eye className="w-4 h-4" />
+                {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
                 Preview
               </button>
               <button
@@ -296,7 +320,77 @@ export function ComposePage() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {previewHtml !== null && (
+          <PreviewModal
+            html={previewHtml}
+            error={previewError}
+            onClose={() => {
+              setPreviewHtml(null)
+              setPreviewError(null)
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  )
+}
+
+function PreviewModal({
+  html,
+  error,
+  onClose,
+}: {
+  html: string
+  error: string | null
+  onClose: () => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.97, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.97, opacity: 0 }}
+        className="bg-surface-0 rounded-2xl border border-border shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Eye className="w-4 h-4 text-slate-500" />
+            <h3 className="text-sm font-display font-semibold text-slate-900">Issue preview</h3>
+            <span className="text-[11px] font-body text-slate-400">Email HTML — exactly what ships</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-xs font-display font-medium text-slate-500 hover:text-slate-900 cursor-pointer px-2 py-1"
+          >
+            Close
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden bg-slate-100">
+          {error ? (
+            <div className="flex items-center gap-2 text-sm text-loss font-body p-6">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          ) : (
+            <iframe
+              title="Issue preview"
+              srcDoc={html}
+              className="w-full h-[75vh] border-0 bg-white"
+            />
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   )
 }
 

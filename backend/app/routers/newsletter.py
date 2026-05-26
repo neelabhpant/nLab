@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from app.models.newsletter import (
@@ -123,6 +123,15 @@ async def delete_draft(draft_id: str) -> None:
     deleted = await composer_service.delete_draft(draft_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Draft not found")
+
+
+@router.get("/drafts/{draft_id}/preview", response_class=HTMLResponse)
+async def preview_draft(draft_id: str) -> HTMLResponse:
+    """Render the in-progress draft as email HTML (composer Preview)."""
+    html = await composer_service.render_draft_preview(draft_id)
+    if html is None:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    return HTMLResponse(content=html)
 
 
 @router.post("/drafts/{draft_id}/send", response_model=SentIssue)
