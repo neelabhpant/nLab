@@ -35,9 +35,9 @@ ORANGE_HEX = "#F96302"
 NAVY_HEX = "#0F1729"
 
 AUTHOR_NAME = "Neelabh Pant"
-AUTHOR_TITLE = "Director, Global AI Industry Solutions for Retail · Cloudera"
-# Contact line for the footer. Edit to taste; left generic on purpose.
-AUTHOR_CONTACT = "Reach out on Slack or reply to this note."
+AUTHOR_TITLE = "Director, Global AI Industry Solutions — Retail"
+AUTHOR_COMPANY = "Cloudera"
+AUTHOR_CONTACT = "npant@cloudera.com"
 
 SECTION_TITLES: list[tuple[str, str]] = [
     ("the_read", "The Read"),
@@ -224,13 +224,14 @@ def build_pdf(issue: SentIssue, spotlight_image: Optional[bytes] = None) -> byte
         y = prose(issue.footer_cta, y, size=10, leading=14)
         y += 6
 
-    page, y = ensure(y, 40)
+    page, y = ensure(y, 56)
     page.insert_text(fitz.Point(MARGIN, y), AUTHOR_NAME, fontname=bold_font, fontsize=10, color=_rgb(DEEP_NAVY))
     y += 14
     page.insert_text(fitz.Point(MARGIN, y), AUTHOR_TITLE, fontname=body_font, fontsize=9, color=_rgb(SLATE_500))
-    y += 13
-    if AUTHOR_CONTACT:
-        page.insert_text(fitz.Point(MARGIN, y), AUTHOR_CONTACT, fontname=body_font, fontsize=9, color=_rgb(SLATE_500))
+    y += 12
+    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_COMPANY, fontname=body_font, fontsize=9, color=_rgb(SLATE_500))
+    y += 12
+    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_CONTACT, fontname=body_font, fontsize=9, color=_rgb(CLOUDERA_ORANGE))
 
     return doc.tobytes()
 
@@ -306,9 +307,11 @@ def build_email_html(issue: SentIssue) -> str:
   {section_block("Wins & References", bullets(_bullets(s.wins.items)))}
   {section_block("On the Horizon", bullets(_bullets(s.horizon.items)))}
   {footer_cta}
-  <tr><td style="padding:24px 32px 28px 32px;">
+  <tr><td style="padding:24px 32px 28px 32px;border-top:1px solid #e2e8f0;">
     <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:{NAVY_HEX};">{html_lib.escape(AUTHOR_NAME)}</div>
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;margin-top:2px;">{html_lib.escape(AUTHOR_TITLE)}</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;margin-top:2px;">{html_lib.escape(AUTHOR_TITLE, quote=False)}</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;">{html_lib.escape(AUTHOR_COMPANY)}</div>
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:{ORANGE_HEX};margin-top:2px;"><a href="mailto:{html_lib.escape(AUTHOR_CONTACT, quote=True)}" style="color:{ORANGE_HEX};text-decoration:none;">{html_lib.escape(AUTHOR_CONTACT)}</a></div>
   </td></tr>
 </table>
 </td></tr>
@@ -355,5 +358,5 @@ def build_slack_text(issue: SentIssue) -> str:
         out.append(issue.footer_cta.strip())
         out.append("")
 
-    out.append(f"*{AUTHOR_NAME}* · {AUTHOR_TITLE}")
+    out.append(f"*{AUTHOR_NAME}* · {AUTHOR_TITLE} · {AUTHOR_COMPANY} · {AUTHOR_CONTACT}")
     return "\n".join(out)
