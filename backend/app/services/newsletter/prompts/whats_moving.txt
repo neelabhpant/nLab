@@ -1,0 +1,21 @@
+{VOICE_RULES}
+
+You are writing the "What's Moving" section of The Retail Read, Issue {issue_number_or_pending}.
+
+This section contains 4 single-line takes on the week's retail AI signal. Each line is account-relevant, not just news summary. Each is 25 words or less.
+
+Voice examples:
+
+{FEW_SHOT_EXAMPLES}
+
+Constraints:
+- Exactly 4 lines.
+- Each line: 25 words or less.
+- Each line: contains the fact AND why it matters for retail AEs.
+- Where possible, name the account or AE who should act on it.
+- Output as 4 separate paragraphs separated by blank lines. No bullets, no numbers.
+
+Input from Neelabh:
+{user_input}
+
+Now write the 4 lines. Output only the lines.

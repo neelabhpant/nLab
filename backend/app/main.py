@@ -1,5 +1,13 @@
 import logging
 
+# Surface application INFO/WARNING logs in the uvicorn output. Without this, the
+# root logger drops them and we can't see things like the newsletter LLM model
+# selection or seed-loader counts.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,6 +17,7 @@ from app.routers import prices, chat, news, sentiment, advisor, portfolio, auth,
 from app.routers import settings as settings_router
 from app.services.auth import verify_token
 from app.services.pov_library import pov_library_service
+from app.services.newsletter.voice import voice_service
 from app.services.vault_storage import VaultStorage
 from app.services.vault_memory import VaultMemory
 from app.routers.pov_library import SEED_PATH as POV_SEED_PATH
@@ -117,6 +126,23 @@ async def startup_vault() -> None:
             logger.info("POV library has %d entries, skipping seed.", len(existing))
     except Exception as exc:  # noqa: BLE001 — startup must not crash on a seeding hiccup
         logger.warning("POV library seed step failed: %s", exc)
+
+    # Newsletter Composer — voice corpus seed loader (idempotent).
+    from pathlib import Path as _Path
+    voice_seed_path = _Path(__file__).resolve().parent.parent / "data" / "seed" / "voice_examples_seed.json"
+    try:
+        existing_voice = await voice_service.list_examples()
+        if not existing_voice:
+            loaded = await voice_service.seed_from_file(voice_seed_path)
+            logger.info(
+                "Seeding voice corpus from %s: %d examples loaded",
+                voice_seed_path.name,
+                loaded,
+            )
+        else:
+            logger.info("Voice corpus has %d entries, skipping seed.", len(existing_voice))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Voice corpus seed step failed: %s", exc)
 
 
 @app.get("/api/v1/health")

@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { useComposeStore } from '../stores/compose-store'
 import { AIAssistButton } from '../components/ai-assist-button'
 import { POVPicker } from '../components/pov-picker'
+import { GenerationOverlay } from '../components/generation-overlay'
+import { VoiceWarningBanner } from '../components/voice-warning-banner'
+import { GenerationErrorToast } from '../components/generation-error-toast'
 
 const SOFT_LIMIT = 200
 const HARD_LIMIT = 230
@@ -12,13 +16,31 @@ function countWords(text: string): number {
 }
 
 export function UseCaseSpotlightEditor() {
-  const { currentDraft, updateCurrentDraft } = useComposeStore()
+  const {
+    currentDraft,
+    updateCurrentDraft,
+    generateSection,
+    dismissVoiceWarning,
+    applyVoiceSuggestions,
+    generating,
+    generationError,
+    voiceWarnings,
+  } = useComposeStore()
+
+  const [tailorPromptOpen, setTailorPromptOpen] = useState(false)
+  const [tailorInput, setTailorInput] = useState('')
+
   if (!currentDraft) return null
 
   const section = currentDraft.sections.use_case_spotlight
   const words = countWords(section.content)
   const overSoft = words > SOFT_LIMIT
   const overHard = words > HARD_LIMIT
+  const isGenerating = generating.use_case_spotlight ?? false
+  const violations = voiceWarnings.use_case_spotlight ?? []
+  const error = generationError.use_case_spotlight ?? null
+  const noPOV = !section.pov_id
+  const tailoredAccount = section.tailored_for_account ?? ''
 
   const patch = (next: Partial<typeof section>) => {
     updateCurrentDraft({
@@ -27,6 +49,38 @@ export function UseCaseSpotlightEditor() {
         use_case_spotlight: { ...section, ...next },
       },
     })
+  }
+
+  const handleCompose = () => {
+    if (!section.pov_id) return
+    void generateSection('use_case_spotlight', {
+      kind: 'use_case_spotlight',
+      povId: section.pov_id,
+      userInput: section.content || null,
+      tailoredForAccount: section.tailored_for_account ?? null,
+    })
+  }
+
+  const handleTailor = () => {
+    if (!section.pov_id) return
+    if (!tailorPromptOpen) {
+      setTailorPromptOpen(true)
+      setTailorInput(tailoredAccount)
+      return
+    }
+    const account = tailorInput.trim()
+    if (!account) {
+      setTailorPromptOpen(false)
+      return
+    }
+    patch({ tailored_for_account: account })
+    void generateSection('use_case_spotlight', {
+      kind: 'use_case_spotlight',
+      povId: section.pov_id,
+      userInput: section.content || null,
+      tailoredForAccount: account,
+    })
+    setTailorPromptOpen(false)
   }
 
   return (
@@ -48,18 +102,73 @@ export function UseCaseSpotlightEditor() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <AIAssistButton label="Compose spotlight from POV" />
-        <AIAssistButton label="Tailor for account" />
+      <div className="flex flex-wrap gap-2 items-center">
+        <AIAssistButton
+          label="Compose spotlight from POV"
+          loading={isGenerating}
+          disabledReason={noPOV ? 'Select a POV first' : undefined}
+          onClick={handleCompose}
+        />
+        <AIAssistButton
+          label={tailorPromptOpen ? 'Generate tailored version' : 'Tailor for account'}
+          loading={isGenerating}
+          disabledReason={noPOV ? 'Select a POV first' : undefined}
+          onClick={handleTailor}
+        />
+        {tailorPromptOpen && (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={tailorInput}
+              onChange={(e) => setTailorInput(e.target.value)}
+              placeholder="e.g. Walmart"
+              autoFocus
+              className="px-3 py-1.5 rounded-lg border border-emerald-300 bg-surface-0 text-xs font-body text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setTailorPromptOpen(false)
+                setTailorInput('')
+              }}
+              className="text-xs font-display font-medium text-slate-500 hover:text-slate-900 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
 
-      <textarea
-        rows={12}
-        value={section.content}
-        onChange={(e) => patch({ content: e.target.value })}
-        placeholder="What it is. The differentiator. Target accounts. The AE hook."
-        className="w-full rounded-xl border border-border bg-surface-0 px-4 py-3 text-base font-body text-slate-900 placeholder:text-slate-300 leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 resize-y min-h-[18rem]"
+      <VoiceWarningBanner
+        violations={violations}
+        onApply={() => applyVoiceSuggestions('use_case_spotlight')}
+        onDismiss={() => dismissVoiceWarning('use_case_spotlight')}
+        applying={isGenerating}
       />
+
+      <GenerationErrorToast
+        message={error}
+        onDismiss={() => useComposeStore.setState((s) => ({
+          generationError: { ...s.generationError, use_case_spotlight: null },
+        }))}
+        onRetry={handleCompose}
+      />
+
+      <div className="relative">
+        <GenerationOverlay
+          visible={isGenerating}
+          message="Composing spotlight"
+          estimate="about 20 seconds"
+        />
+        <textarea
+          rows={12}
+          value={section.content}
+          onChange={(e) => patch({ content: e.target.value })}
+          disabled={isGenerating}
+          placeholder="What it is. The differentiator. Target accounts. The AE hook."
+          className="w-full rounded-xl border border-border bg-surface-0 px-4 py-3 text-base font-body text-slate-900 placeholder:text-slate-300 leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 resize-y min-h-[18rem] disabled:bg-surface-1"
+        />
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-end sm:justify-between">
         <div className="flex-1">
@@ -68,7 +177,7 @@ export function UseCaseSpotlightEditor() {
           </label>
           <input
             type="text"
-            value={section.tailored_for_account ?? ''}
+            value={tailoredAccount}
             onChange={(e) => patch({ tailored_for_account: e.target.value || null })}
             placeholder="e.g. Walmart, Mars, Kroger"
             className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"

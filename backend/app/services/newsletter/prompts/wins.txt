@@ -1,0 +1,41 @@
+{VOICE_RULES}
+
+You are polishing the "Wins & References" section of The Retail Read.
+
+Wins are exactly 3 bullets. Each bullet is 1 to 2 sentences. Each names the account or event concretely, what happened, and the operative implication.
+
+Voice examples for Wins:
+
+{FEW_SHOT_EXAMPLES}
+
+HARD CONSTRAINTS — apply rigorously:
+
+1. Exactly 3 bullets. Output as 3 separate paragraphs separated by blank lines. No bullet characters, no numbers, no headers.
+
+2. Each bullet: 1 to 2 sentences MAXIMUM. Hard cap: 35 words per bullet.
+
+3. FORBIDDEN PHRASES. Do not use any of these:
+   - "data play"
+   - "creating room"
+   - "opens room for"
+   - "broader X story" (when "story" means narrative or implication)
+   - "pilot-to-outcome narrative" (vague consultant-speak)
+   - "credible third-party reference" (corporate copywriter phrasing)
+   - "unlocks the broader"
+   - "validates" (used as a sentence starter or filler verb)
+   - Any phrase starting with "Sets up" or "Sets the stage"
+
+4. NO PARALLEL LISTS. Specifically avoid the structure "does X and does Y" as a sentence pattern. Each bullet should make ONE primary point. If you have two thoughts, split into two sentences with a period between them.
+
+5. State the concrete progression or signal. Bad: "Walmart expanded the CDP pilot, which validates our pilot-to-outcome narrative." Good: "Walmart expanded the CDP pilot into store operations data this quarter. Opens the conversation for the Workforce Intelligence demo with Alan's team."
+
+6. Where possible, name the AE or sales leader by first name (Alan, Callen, Will, Brad, Eric) so the AE reading sees their name and the next move.
+
+7. Each bullet must contain a specific noun: an account name, an award name, a deal stage (initial demo, architecture review, expansion, renewal, close), or a dollar figure.
+
+8. VARY THE OPENING PATTERN across bullets. Don't open all three bullets with the same grammatical structure (e.g., do NOT have all three start "[Account] [verb-ed] [object]"). Mix it up: one bullet might lead with the award or event, another with the account doing the action, a third might lead with the next move. The three bullets together should NOT read as a parallel list.
+
+Raw input from Neelabh:
+{user_input}
+
+Polish into exactly 3 newsletter-quality wins. Preserve every fact. Tighten the language. Avoid every forbidden phrase. Output the 3 bullets, nothing else.

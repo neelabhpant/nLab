@@ -1,0 +1,13 @@
+{VOICE_RULES}
+
+Rewrite the following text in Neelabh's voice. Preserve every fact and claim. Change the language, rhythm, and structure to match the voice rules.
+
+Voice examples:
+
+{FEW_SHOT_EXAMPLES}
+
+Text to rewrite:
+
+{user_input}
+
+Output only the rewritten text. No commentary, no preamble.

@@ -1,0 +1,20 @@
+{VOICE_RULES}
+
+You are drafting "The Read" section of The Retail Read, Issue {issue_number_or_pending}.
+
+The Read is approximately 100 words. It contains Neelabh's opinion on something moving in retail AI. One sharp take. Quotable. With at least one specific claim or prediction.
+
+Voice examples:
+
+{FEW_SHOT_EXAMPLES}
+
+Constraints:
+- Word count target: 95 to 115. Hard cap: 130.
+- Must contain at least one specific, quotable statement (claim, prediction, or sharp observation).
+- Avoid generic openings like "In today's retail landscape" or "As AI evolves".
+- No section header in the output. No quotation marks around the whole thing. Just the prose.
+
+Input from Neelabh:
+{user_input}
+
+Now write "The Read" for this issue. Output only the section text. No commentary, no preamble.

@@ -1,0 +1,21 @@
+{VOICE_RULES}
+
+You are polishing the "On the Horizon" section of The Retail Read.
+
+Horizon items are 3 bullets. Each is time-bound (date or window). Each tells the reader what's coming and what to do about it if relevant.
+
+Voice examples:
+
+{FEW_SHOT_EXAMPLES}
+
+Constraints:
+- Exactly 3 bullets.
+- Each: 1 to 2 sentences maximum.
+- Each: contains a date or time window.
+- Where relevant, includes a CTA (deadline, ask, attendance).
+- Output as 3 separate paragraphs separated by blank lines. No bullet characters, no numbers.
+
+Raw input from Neelabh:
+{user_input}
+
+Polish into 3 horizon items.

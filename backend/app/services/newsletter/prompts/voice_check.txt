@@ -1,0 +1,27 @@
+Check the following text for voice violations against these rules. Output a JSON object with a violations array. Return an empty array if clean.
+
+Rules:
+1. No em-dashes (—).
+2. No parallel lists in prose (multiple "do x, do y, do z" structures).
+3. No hedging language ("perhaps", "might", "could potentially").
+4. No filler phrases ("Here's the thing", "The reality is", "It's important to note").
+5. No bolded lead-ins or excessive headers.
+6. No exclamation marks.
+7. No sentences over 30 words that don't earn their length.
+8. No generic copywriter phrases.
+
+For each violation, include: rule (number), problematic_text (exact quote), suggestion (rewrite).
+
+Output strictly this JSON shape, nothing else:
+{{
+  "violations": [
+    {{"rule": 1, "problematic_text": "...", "suggestion": "..."}}
+  ]
+}}
+
+If no violations, output:
+{{"violations": []}}
+
+Text to check:
+
+{user_input}

@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 import { api } from '@/shared/lib/api'
+import {
+  newsletterApi,
+  extractErrorMessage,
+  type SectionKey,
+  type VoiceViolation,
+} from '@/shared/lib/newsletter-api'
 
 export type ActiveSection =
   | 'the_read'
@@ -82,6 +88,17 @@ export const EMPTY_SECTIONS: IssueSections = {
 
 type DraftPatch = Partial<Pick<IssueDraft, 'sections' | 'footer_cta'>>
 
+export type GenerationParams =
+  | { kind: 'the_read'; userInput: string }
+  | { kind: 'whats_moving'; userInput: string }
+  | {
+      kind: 'use_case_spotlight'
+      povId: string
+      userInput?: string | null
+      tailoredForAccount?: string | null
+    }
+  | { kind: 'polish'; userInput: string; promptPrefix?: string }
+
 interface ComposeStore {
   currentDraft: IssueDraft | null
   drafts: IssueDraft[]
@@ -91,6 +108,11 @@ interface ComposeStore {
   lastSavedAt: string | null
   error: string | null
   activeSection: ActiveSection
+
+  // AI state
+  generating: Partial<Record<ActiveSection, boolean>>
+  generationError: Partial<Record<ActiveSection, string | null>>
+  voiceWarnings: Partial<Record<ActiveSection, VoiceViolation[]>>
 
   createDraft: () => Promise<IssueDraft>
   loadDraft: (draftId: string) => Promise<void>
@@ -105,6 +127,13 @@ interface ComposeStore {
 
   setActiveSection: (section: ActiveSection) => void
   resetCurrentDraft: () => void
+
+  // AI actions
+  generateSection: (section: ActiveSection, params: GenerationParams) => Promise<void>
+  polishSection: (section: ActiveSection, promptPrefix?: string) => Promise<void>
+  checkVoice: (section: ActiveSection) => Promise<void>
+  dismissVoiceWarning: (section: ActiveSection) => void
+  applyVoiceSuggestions: (section: ActiveSection) => Promise<void>
 }
 
 // Module-scoped debounce timer for auto-save.
@@ -127,6 +156,10 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
   lastSavedAt: null,
   error: null,
   activeSection: 'the_read',
+
+  generating: {},
+  generationError: {},
+  voiceWarnings: {},
 
   async createDraft() {
     set({ loading: true, error: null })
@@ -272,9 +305,267 @@ export const useComposeStore = create<ComposeStore>((set, get) => ({
 
   resetCurrentDraft() {
     clearAutoSave()
-    set({ currentDraft: null, lastSavedAt: null, error: null })
+    set({
+      currentDraft: null,
+      lastSavedAt: null,
+      error: null,
+      generating: {},
+      generationError: {},
+      voiceWarnings: {},
+    })
+  },
+
+  // ---------- AI actions ----------
+
+  async generateSection(section, params) {
+    const current = get().currentDraft
+    if (!current) return
+
+    set({
+      generating: { ...get().generating, [section]: true },
+      generationError: { ...get().generationError, [section]: null },
+    })
+
+    try {
+      let content: string
+      switch (params.kind) {
+        case 'the_read':
+          content = await newsletterApi.generateTheRead(
+            params.userInput,
+            current.issue_number,
+          )
+          break
+        case 'whats_moving':
+          content = await newsletterApi.generateWhatsMoving(
+            params.userInput,
+            current.issue_number,
+          )
+          break
+        case 'use_case_spotlight':
+          content = await newsletterApi.generateUseCaseSpotlight(
+            params.povId,
+            params.userInput ?? null,
+            params.tailoredForAccount ?? null,
+          )
+          break
+        case 'polish': {
+          const input = params.promptPrefix
+            ? `${params.promptPrefix}\n\n${params.userInput}`
+            : params.userInput
+          content = await newsletterApi.polish(input, section as SectionKey)
+          break
+        }
+      }
+
+      applySectionContent(section, content, set, get)
+
+      // Auto voice-check after generation. Non-blocking on failure.
+      try {
+        const check = await newsletterApi.voiceCheck(content)
+        set({
+          voiceWarnings: { ...get().voiceWarnings, [section]: check.violations },
+        })
+      } catch (voiceErr) {
+        // Voice check is advisory only — log but don't surface.
+        console.warn('voice check failed', voiceErr)
+        set({
+          voiceWarnings: { ...get().voiceWarnings, [section]: [] },
+        })
+      }
+    } catch (err) {
+      const message = extractErrorMessage(err, 'Generation failed')
+      set({
+        generationError: { ...get().generationError, [section]: message },
+      })
+    } finally {
+      set({
+        generating: { ...get().generating, [section]: false },
+      })
+    }
+  },
+
+  async polishSection(section, promptPrefix) {
+    const current = get().currentDraft
+    if (!current) return
+    const userInput = extractSectionText(section, current.sections)
+    if (!userInput.trim()) {
+      set({
+        generationError: {
+          ...get().generationError,
+          [section]: 'Nothing to polish — write some text first.',
+        },
+      })
+      return
+    }
+    await get().generateSection(section, {
+      kind: 'polish',
+      userInput,
+      promptPrefix,
+    })
+  },
+
+  async checkVoice(section) {
+    const current = get().currentDraft
+    if (!current) return
+    const text = extractSectionText(section, current.sections)
+    if (!text.trim()) {
+      set({
+        voiceWarnings: { ...get().voiceWarnings, [section]: [] },
+      })
+      return
+    }
+    try {
+      const result = await newsletterApi.voiceCheck(text)
+      set({
+        voiceWarnings: { ...get().voiceWarnings, [section]: result.violations },
+      })
+    } catch (err) {
+      console.warn('voice check failed', err)
+    }
+  },
+
+  dismissVoiceWarning(section) {
+    set({
+      voiceWarnings: { ...get().voiceWarnings, [section]: [] },
+    })
+  },
+
+  async applyVoiceSuggestions(section) {
+    const violations = get().voiceWarnings[section] || []
+    if (violations.length === 0) return
+    const current = get().currentDraft
+    if (!current) return
+    const currentContent = extractSectionText(section, current.sections)
+    if (!currentContent.trim()) return
+
+    const violationsBlock = violations
+      .map((v) => `- Rule ${v.rule}: "${v.problematic_text}" → ${v.suggestion}`)
+      .join('\n')
+
+    const userInput = `Apply these specific voice fixes to the text below. Preserve every fact and the overall structure.
+
+Voice fixes to apply:
+${violationsBlock}
+
+Text to fix:
+${currentContent}`
+
+    set({
+      generating: { ...get().generating, [section]: true },
+      generationError: { ...get().generationError, [section]: null },
+    })
+
+    try {
+      const content = await newsletterApi.polish(userInput, section as SectionKey)
+
+      // 1. Write the rewritten content back into the section (debounced auto-save fires).
+      applySectionContent(section, content, set, get)
+
+      // 2. Clear the existing warnings so the banner hides immediately. The follow-up
+      //    voice check will repopulate if the rewrite still has issues.
+      set({
+        voiceWarnings: { ...get().voiceWarnings, [section]: [] },
+      })
+
+      // 3. Fresh voice check on the *applied* draft text (not the raw LLM output),
+      //    so list sections like wins/horizon are checked after splitListSection runs.
+      await get().checkVoice(section)
+    } catch (err) {
+      const message = extractErrorMessage(err, 'Apply suggestions failed')
+      set({
+        generationError: { ...get().generationError, [section]: message },
+      })
+    } finally {
+      set({
+        generating: { ...get().generating, [section]: false },
+      })
+    }
   },
 }))
+
+/**
+ * Section content extractor — mirrors the structure that section editors use
+ * to write back into the draft.
+ */
+function extractSectionText(section: ActiveSection, sections: IssueSections): string {
+  switch (section) {
+    case 'the_read':
+      return sections.the_read.content
+    case 'whats_moving':
+      return sections.whats_moving.items
+        .map((i, idx) => (i.line.trim() ? `${idx + 1}. ${i.line}` : ''))
+        .filter(Boolean)
+        .join('\n')
+    case 'use_case_spotlight':
+      return sections.use_case_spotlight.content
+    case 'wins':
+      return sections.wins.items.filter((s) => s.trim()).join('\n\n')
+    case 'horizon':
+      return sections.horizon.items.filter((s) => s.trim()).join('\n\n')
+  }
+}
+
+/**
+ * Write generated content back into the appropriate section shape. The four
+ * "list" sections split the LLM output on blank lines.
+ */
+function applySectionContent(
+  section: ActiveSection,
+  content: string,
+  _set: (partial: Partial<ComposeStore>) => void,
+  get: () => ComposeStore,
+) {
+  const current = get().currentDraft
+  if (!current) return
+  const sections = { ...current.sections }
+  const parts = splitListSection(content)
+
+  switch (section) {
+    case 'the_read':
+      sections.the_read = { ...sections.the_read, content: content.trim() }
+      break
+    case 'whats_moving': {
+      const lines = parts.slice(0, 4)
+      while (lines.length < 4) lines.push('')
+      sections.whats_moving = {
+        items: lines.map((line, idx) => ({
+          line,
+          article_id: sections.whats_moving.items[idx]?.article_id ?? null,
+        })),
+      }
+      break
+    }
+    case 'use_case_spotlight':
+      sections.use_case_spotlight = {
+        ...sections.use_case_spotlight,
+        content: content.trim(),
+      }
+      break
+    case 'wins': {
+      const items = parts.slice(0, 3)
+      while (items.length < 3) items.push('')
+      sections.wins = { items }
+      break
+    }
+    case 'horizon': {
+      const items = parts.slice(0, 3)
+      while (items.length < 3) items.push('')
+      sections.horizon = { items }
+      break
+    }
+  }
+
+  // Reuse the existing updateCurrentDraft path so debounced auto-save fires.
+  get().updateCurrentDraft({ sections })
+}
+
+/** Split an LLM response into list items, tolerating blank-line or numeric separators. */
+function splitListSection(content: string): string[] {
+  return content
+    .split(/\n{2,}|^\s*\d+\.\s+/m)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0)
+}
 
 /** Derive a title from The Read content. Mirrors the backend _derive_title. */
 export function deriveTitle(draft: IssueDraft | null): string {

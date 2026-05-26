@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -13,7 +15,24 @@ from app.models.newsletter import (
     IssueDraftUpdate,
     SentIssue,
 )
+from app.models.voice import (
+    SECTION_TYPES,
+    SectionType,
+    VoiceCheckResult,
+    VoiceExample,
+    VoiceExampleCreate,
+    VoiceExampleUpdate,
+)
 from app.services.newsletter.composer import composer_service
+from app.services.newsletter.generation import (
+    AnthropicNotConfigured,
+    GenerationTimeout,
+    generation_service,
+)
+from app.services.newsletter.voice import voice_service
+
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/newsletter", tags=["newsletter"])
@@ -21,6 +40,48 @@ router = APIRouter(prefix="/newsletter", tags=["newsletter"])
 
 class SendDraftBody(BaseModel):
     recipient_count: Optional[int] = None
+
+
+# ---------- Generation request shapes ----------
+
+
+class GenerateTheReadBody(BaseModel):
+    user_input: str = ""
+    issue_number: Optional[int] = None
+
+
+class GenerateWhatsMovingBody(BaseModel):
+    user_input: str = ""
+    issue_number: Optional[int] = None
+
+
+class GenerateSpotlightBody(BaseModel):
+    pov_id: str
+    user_input: Optional[str] = None
+    tailored_for_account: Optional[str] = None
+
+
+class PolishBody(BaseModel):
+    user_input: str
+    section_type: Optional[SectionType] = None
+
+
+class VoiceCheckBody(BaseModel):
+    text: str
+
+
+class GenerationResponse(BaseModel):
+    content: str
+
+
+def _llm_error(exc: Exception) -> HTTPException:
+    """Translate LLM exceptions into HTTP responses with clear messages."""
+    if isinstance(exc, AnthropicNotConfigured):
+        return HTTPException(status_code=500, detail=str(exc))
+    if isinstance(exc, GenerationTimeout):
+        return HTTPException(status_code=504, detail=str(exc))
+    logger.exception("newsletter generation failed")
+    return HTTPException(status_code=500, detail=f"LLM error: {exc}")
 
 
 # ---------- Drafts ----------
@@ -84,3 +145,96 @@ async def get_issue(issue_id: str) -> SentIssue:
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found")
     return issue
+
+
+# ---------- Generation ----------
+
+
+@router.post("/generate/the-read", response_model=GenerationResponse)
+async def generate_the_read(body: GenerateTheReadBody) -> GenerationResponse:
+    start = time.perf_counter()
+    try:
+        content = await generation_service.generate_the_read(body.user_input, body.issue_number)
+    except Exception as exc:
+        raise _llm_error(exc) from exc
+    logger.info("newsletter.endpoint=the-read latency_ms=%d", int((time.perf_counter() - start) * 1000))
+    return GenerationResponse(content=content)
+
+
+@router.post("/generate/whats-moving", response_model=GenerationResponse)
+async def generate_whats_moving(body: GenerateWhatsMovingBody) -> GenerationResponse:
+    start = time.perf_counter()
+    try:
+        content = await generation_service.generate_whats_moving(body.user_input, body.issue_number)
+    except Exception as exc:
+        raise _llm_error(exc) from exc
+    logger.info("newsletter.endpoint=whats-moving latency_ms=%d", int((time.perf_counter() - start) * 1000))
+    return GenerationResponse(content=content)
+
+
+@router.post("/generate/use-case-spotlight", response_model=GenerationResponse)
+async def generate_use_case_spotlight(body: GenerateSpotlightBody) -> GenerationResponse:
+    start = time.perf_counter()
+    try:
+        content = await generation_service.generate_use_case_spotlight(
+            pov_id=body.pov_id,
+            user_input=body.user_input,
+            tailored_for_account=body.tailored_for_account,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise _llm_error(exc) from exc
+    logger.info("newsletter.endpoint=spotlight latency_ms=%d", int((time.perf_counter() - start) * 1000))
+    return GenerationResponse(content=content)
+
+
+@router.post("/polish", response_model=GenerationResponse)
+async def polish(body: PolishBody) -> GenerationResponse:
+    start = time.perf_counter()
+    try:
+        content = await generation_service.polish_in_voice(body.user_input, body.section_type)
+    except Exception as exc:
+        raise _llm_error(exc) from exc
+    logger.info("newsletter.endpoint=polish latency_ms=%d", int((time.perf_counter() - start) * 1000))
+    return GenerationResponse(content=content)
+
+
+@router.post("/voice-check", response_model=VoiceCheckResult)
+async def voice_check(body: VoiceCheckBody) -> VoiceCheckResult:
+    start = time.perf_counter()
+    try:
+        result = await generation_service.voice_check(body.text)
+    except Exception as exc:
+        raise _llm_error(exc) from exc
+    logger.info("newsletter.endpoint=voice-check latency_ms=%d", int((time.perf_counter() - start) * 1000))
+    return VoiceCheckResult(**result)
+
+
+# ---------- Voice corpus CRUD ----------
+
+
+@router.get("/voice-examples", response_model=list[VoiceExample])
+async def list_voice_examples(section_type: Optional[SectionType] = None) -> list[VoiceExample]:
+    return await voice_service.list_examples(section_type=section_type)
+
+
+@router.post("/voice-examples", response_model=VoiceExample, status_code=201)
+async def add_voice_example(body: VoiceExampleCreate) -> VoiceExample:
+    if body.section_type not in SECTION_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unknown section_type: {body.section_type}")
+    return await voice_service.add_example(body)
+
+
+@router.put("/voice-examples/{example_id}", response_model=VoiceExample)
+async def update_voice_example(example_id: str, body: VoiceExampleUpdate) -> VoiceExample:
+    updated = await voice_service.update_example(example_id, body)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Voice example not found")
+    return updated
+
+
+@router.delete("/voice-examples/{example_id}", status_code=204)
+async def delete_voice_example(example_id: str) -> None:
+    if not await voice_service.delete_example(example_id):
+        raise HTTPException(status_code=404, detail="Voice example not found")

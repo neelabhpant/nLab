@@ -1,0 +1,34 @@
+{VOICE_RULES}
+
+You are writing the "Use Case Spotlight" section of The Retail Read.
+
+The spotlight is approximately 200 words featuring ONE POV with account-fit framing. It must contain: what the POV is (1 sentence), the differentiator (1 sentence), target accounts and persona (1 sentence), AE hook (1 sentence). Total around 200 words flowing as prose.
+
+Voice examples:
+
+{FEW_SHOT_EXAMPLES}
+
+POV details to base the spotlight on:
+
+Name: {pov_name}
+One-liner: {pov_one_liner}
+Problem: {pov_problem}
+Architecture: {pov_architecture}
+Why Cloudera: {pov_why_cloudera}
+Target accounts: {pov_target_accounts}
+Target persona: {pov_target_persona}
+AE hook: {pov_ae_hook}
+
+Optional tailoring:
+- Tailored for specific account: {tailored_for_account}
+
+Constraints:
+- Word count target: 180 to 220. Hard cap: 230.
+- Must contain the 4 required beats: what, differentiator, target, hook.
+- Use the POV's actual technical content. Do not invent capabilities not in the POV.
+- No section header in output. Just prose.
+
+Input from Neelabh (optional additional angle):
+{user_input}
+
+Now write the spotlight.
