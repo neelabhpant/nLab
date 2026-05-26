@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 _summary_cache: TTLCache[str, dict] = TTLCache(maxsize=200, ttl=1800)
 
-_NO_TEMPERATURE_MODELS = {"gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5.2"}
+_NO_TEMPERATURE_MODELS = {"gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5.2", "claude-opus-4-7"}
 
 def get_retail_llm_settings() -> dict:
     """Return LLM settings for Retail space using global user settings."""

@@ -61,6 +61,11 @@ def get_user_settings() -> dict:
 
 _NO_TEMPERATURE_MODELS = {"gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5.2"}
 
+# Anthropic models that reject the `temperature` parameter (Opus 4.7 deprecated
+# it; newer models follow). Matched by prefix. Mirrors the guard in
+# services/newsletter/llm_client.py.
+_NO_TEMPERATURE_ANTHROPIC = ("claude-opus-4-7",)
+
 
 def get_llm() -> LLM:
     """Build a CrewAI LLM using current user settings."""
@@ -68,11 +73,14 @@ def get_llm() -> LLM:
     provider = s["provider"]
 
     if provider == "anthropic":
-        return LLM(
-            model=f"anthropic/{s['anthropic_model']}",
-            api_key=s["anthropic_api_key"],
-            temperature=0.3,
-        )
+        model_name = s["anthropic_model"]
+        kwargs: dict = {
+            "model": f"anthropic/{model_name}",
+            "api_key": s["anthropic_api_key"],
+        }
+        if not any(model_name.startswith(p) for p in _NO_TEMPERATURE_ANTHROPIC):
+            kwargs["temperature"] = 0.3
+        return LLM(**kwargs)
 
     if provider == "groq":
         model_name = s["groq_model"]
