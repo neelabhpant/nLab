@@ -83,6 +83,20 @@ def _bullets(items: list[str]) -> list[str]:
     return [i.strip() for i in items if i and i.strip()]
 
 
+def _paragraphs(text: str) -> list[str]:
+    """Split body text into paragraphs on blank lines.
+
+    A blank line (one or more newlines surrounded by optional whitespace) starts
+    a new paragraph; single soft-wrap newlines inside a paragraph collapse to a
+    space so each paragraph renders as one continuous <p>.
+    """
+    stripped = (text or "").strip()
+    if not stripped:
+        return []
+    blocks = re.split(r"\n\s*\n", stripped)
+    return [re.sub(r"\s*\n\s*", " ", b).strip() for b in blocks if b.strip()]
+
+
 def _whats_moving_lines(sections: IssueSections) -> list[str]:
     return [i.line.strip() for i in sections.whats_moving.items if i.line and i.line.strip()]
 
@@ -416,6 +430,10 @@ def build_email_html(
     hero_image_mime: str = "image/jpeg",
     booking_url: str = "#",
     spotlight_title: Optional[str] = None,
+    reply_cta_heading: str = "Reply ›",
+    reply_cta_body: str = "What account is this hitting? Send the name.",
+    book_cta_heading: str = "Book ›",
+    book_cta_body: str = "30-min walkthrough of any use case.",
 ) -> str:
     """Render the Briefing email (Plus Jakarta Sans throughout) via Jinja2.
 
@@ -435,16 +453,21 @@ def build_email_html(
         "horizon": bool(_bullets(s.horizon.items)),
     }
 
-    # Drop cap: first letter floats; the rest flows. Plain text, autoescaped.
-    first_letter = the_read[:1]
-    rest = the_read[1:]
+    # The Read renders as discrete paragraphs (split on blank lines). The drop cap
+    # floats on the first letter of the first paragraph; the remaining paragraphs
+    # each become their own <p>. All plain text, autoescaped.
+    the_read_paras = _paragraphs(the_read)
+    first_para = the_read_paras[0] if the_read_paras else ""
+    first_letter = first_para[:1]
+    first_rest = first_para[1:]
+    more_paras = the_read_paras[1:]
 
     # Spotlight title: resolved POV name when supplied, else the section default.
     spotlight_ctx = None
     if present["use_case_spotlight"]:
         spotlight_ctx = {
             "title": (spotlight_title or "").strip() or "Use Case Spotlight",
-            "content": (s.use_case_spotlight.content or "").strip(),
+            "paragraphs": _paragraphs(s.use_case_spotlight.content or ""),
             "tailored_for": (s.use_case_spotlight.tailored_for_account or "").strip() or None,
             "image_data_uri": _data_uri(spotlight_image, spotlight_image_mime),
         }
@@ -471,7 +494,8 @@ def build_email_html(
         "hero_caption": (issue.hero_caption or "").strip() or None,
         "the_read": the_read,
         "the_read_first_letter": first_letter,
-        "the_read_rest": rest,
+        "the_read_first_rest": first_rest,
+        "the_read_more_paragraphs": more_paras,
         "pull_quote": derive_pull_quote(the_read) if present["the_read"] else None,
         "spotlight": spotlight_ctx,
         "wins": _bullets(s.wins.items),
@@ -480,6 +504,10 @@ def build_email_html(
         "footer_cta": (issue.footer_cta or "").strip(),
         "booking_url": booking_url or "#",
         "reply_subject": reply_subject,
+        "reply_cta_heading": (reply_cta_heading or "").strip() or "Reply ›",
+        "reply_cta_body": (reply_cta_body or "").strip(),
+        "book_cta_heading": (book_cta_heading or "").strip() or "Book ›",
+        "book_cta_body": (book_cta_body or "").strip(),
         "author_name": AUTHOR_NAME,
         "author_title": AUTHOR_TITLE,
         "author_company": AUTHOR_COMPANY,

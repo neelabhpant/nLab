@@ -417,6 +417,7 @@ class ComposerService:
             hero_image_mime=hero_mime,
             booking_url=self._booking_url(),
             spotlight_title=spotlight_title,
+            **self._cta_copy(),
         )
 
     async def _resolve_spotlight_image(
@@ -491,6 +492,22 @@ class ComposerService:
         except Exception:  # noqa: BLE001 — settings read must never break a render
             return "#"
 
+    @staticmethod
+    def _cta_copy() -> dict[str, str]:
+        """Configurable Reply/Book CTA copy from user settings.
+
+        Empty strings are dropped so build_email_html falls back to its own
+        field-AE-oriented defaults; a settings read must never break a render.
+        """
+        try:
+            from app.services.llm import get_user_settings
+
+            s = get_user_settings()
+            keys = ("reply_cta_heading", "reply_cta_body", "book_cta_heading", "book_cta_body")
+            return {k: v for k in keys if (v := (s.get(k) or "").strip())}
+        except Exception:  # noqa: BLE001
+            return {}
+
     async def set_hero_image(
         self, draft_id: str, data: bytes, filename: str
     ) -> Optional[IssueDraft]:
@@ -544,6 +561,7 @@ class ComposerService:
             hero_image_mime=hero_mime,
             booking_url=self._booking_url(),
             spotlight_title=spotlight_title,
+            **self._cta_copy(),
         )
         storage = get_storage()
         await storage.store_file(pdf_rel, build_pdf(issue, spotlight_image))

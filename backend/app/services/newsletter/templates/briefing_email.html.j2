@@ -61,8 +61,6 @@
     .rr-dropcap         { font-size:48px !important; padding-top:2px !important; }
     .rr-numeral         { font-size:26px !important; }
     .rr-pull            { font-size:18px !important; line-height:1.35 !important; }
-    .rr-event-cell      { width:100% !important; display:block !important; border-right:0 !important; padding:14px 0 !important; border-bottom:1px solid #c6bba8 !important; }
-    .rr-event-cell-last { border-bottom:0 !important; }
     .rr-cta-cell        { display:block !important; width:100% !important; margin-bottom:10px !important; }
     .rr-cta-cell-last   { margin-bottom:0 !important; }
     .rr-colo-cell       { display:block !important; width:100% !important; text-align:left !important; padding:8px 0 !important; }
@@ -201,12 +199,15 @@
   {% endif %}
 
   {% if the_read %}
-  <!-- ── 06 · LEDE / BODY (single-column, drop cap on first letter) ── -->
+  <!-- ── 06 · LEDE / BODY (single-column, drop cap, paragraph breaks) ── -->
   <tr><td class="rr-pad" style="padding:24px 24px 0;">
     <p class="rr-serif" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#15110d;margin:0;">
       <span class="rr-serif rr-dropcap"
-            style="float:left;font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:58px;line-height:0.84;font-weight:800;color:#15110d;padding-right:8px;padding-top:6px;">{{ the_read_first_letter }}</span>{{ the_read_rest }}
+            style="float:left;font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:58px;line-height:0.84;font-weight:800;color:#15110d;padding-right:8px;padding-top:6px;">{{ the_read_first_letter }}</span>{{ the_read_first_rest }}
     </p>
+    {% for para in the_read_more_paragraphs %}
+    <p class="rr-serif" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#15110d;margin:16px 0 0;">{{ para }}</p>
+    {% endfor %}
   </td></tr>
   {% endif %}
 
@@ -249,26 +250,19 @@
       {{ spotlight.title }}
     </h2>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-      <tr>
-        {% if spotlight.image_data_uri %}
-        <td class="rr-col-stack" valign="top" width="270" style="width:270px;padding-right:14px;">
-          <img class="rr-spot-img"
-               src="{{ spotlight.image_data_uri }}"
-               width="256" height="auto"
-               alt="{{ spotlight.title }} · system view"
-               style="display:block;width:100%;max-width:256px;height:auto;border:1px solid #c6bba8;">
-        </td>
-        <td class="rr-col-stack rr-col-stack-pad" valign="top">
-        {% else %}
-        <td valign="top">
-        {% endif %}
-          <p class="rr-serif" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.58;color:#15110d;margin:0;">
-            {{ spotlight.content }}
-          </p>
-        </td>
-      </tr>
-    </table>
+    {% if spotlight.image_data_uri %}
+    <!-- Image runs the full content column, body stacks beneath (desktop + mobile). -->
+    <img class="rr-spot-img"
+         src="{{ spotlight.image_data_uri }}"
+         width="552" height="auto"
+         alt="{{ spotlight.title }} · system view"
+         style="display:block;width:100%;max-width:552px;height:auto;border:1px solid #c6bba8;margin:0 0 16px;">
+    {% endif %}
+    {% for para in spotlight.paragraphs %}
+    <p class="rr-serif" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.58;color:#15110d;margin:{% if loop.first %}0{% else %}14px 0 0{% endif %};">
+      {{ para }}
+    </p>
+    {% endfor %}
   </td></tr>
   {% endif %}
 
@@ -339,22 +333,36 @@
   {% endif %}
 
   {% if events %}
-  <!-- ── 12 · WHERE I'LL BE (On The Horizon) ─────────────────────── -->
+  <!-- ── 12 · ON THE HORIZON (vertical list, weighted orange bullets) ─ -->
   <tr><td class="rr-pad" style="padding:30px 24px 0;">
-    <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#15110d;margin:0 0 6px;">Where I&#39;ll be</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="rr-mono" align="left" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:600;color:#15110d;">On The Horizon</td>
+        <td class="rr-mono" align="right" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;font-weight:500;color:#5a4f43;">C-section</td>
+      </tr>
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
       <tr><td height="2" style="line-height:2px;font-size:0;background:#15110d;">&nbsp;</td></tr>
       <tr><td height="2" style="line-height:2px;font-size:0;">&nbsp;</td></tr>
       <tr><td height="1" style="line-height:1px;font-size:0;background:#15110d;">&nbsp;</td></tr>
     </table>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      {% for ev in events %}
       <tr>
-        {% for ev in events %}
-        <td class="rr-event-cell{% if loop.last %} rr-event-cell-last{% endif %}" valign="top" width="33.33%" style="width:33.33%;{% if loop.first %}padding:0 12px 0 0;{% elif loop.last %}padding:0 0 0 12px;{% else %}padding:0 12px;{% endif %}{% if not loop.last %}border-right:1px solid #c6bba8;{% endif %}">
-          <p class="rr-serif" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.3;font-weight:700;color:#15110d;margin:0;">{{ ev }}</p>
+        <td style="padding:13px 0;{% if not loop.last %}border-bottom:1px solid #c6bba8;{% endif %}">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td valign="top" width="22" style="width:22px;padding-top:6px;">
+                <span style="display:inline-block;width:9px;height:9px;background:#F96302;">&nbsp;</span>
+              </td>
+              <td valign="top">
+                <p class="rr-serif" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;line-height:1.35;color:#15110d;margin:0;">{{ ev }}</p>
+              </td>
+            </tr>
+          </table>
         </td>
-        {% endfor %}
       </tr>
+      {% endfor %}
     </table>
   </td></tr>
   {% endif %}
@@ -374,15 +382,15 @@
             <td class="rr-cta-cell" valign="middle" width="27%" style="width:27%;padding-right:8px;">
               <a href="mailto:{{ author_contact }}?subject={{ reply_subject }}"
                  style="display:block;text-decoration:none;border:1px solid #f6f1e8;padding:12px 14px;color:#f6f1e8;font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:600;font-size:14px;line-height:1.3;">
-                <span class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#F96302;display:block;margin-bottom:4px;">Reply &rsaquo;</span>
-                Tell me where I am wrong.
+                <span class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#F96302;display:block;margin-bottom:4px;">{{ reply_cta_heading }}</span>
+                {{ reply_cta_body }}
               </a>
             </td>
             <td class="rr-cta-cell rr-cta-cell-last" valign="middle" width="27%" style="width:27%;">
               <a href="{{ booking_url }}"
                  style="display:block;text-decoration:none;background:#F96302;padding:12px 14px;color:#15110d;font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:700;font-size:14px;line-height:1.3;">
-                <span class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#15110d;display:block;margin-bottom:4px;">Book &rsaquo;</span>
-                30 minutes, working session.
+                <span class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#15110d;display:block;margin-bottom:4px;">{{ book_cta_heading }}</span>
+                {{ book_cta_body }}
               </a>
             </td>
           </tr>

@@ -79,7 +79,7 @@ def test_build_email_html_has_inline_styles_and_sections() -> None:
     assert "style=" in html  # inline CSS on every element
     # Briefing masthead + section labels (the four-moves / editor's note slots are omitted).
     assert "The Retail Read" in html
-    for label in ["What I&#39;m reading", "Use Case Spotlight", "Wins &amp; References", "Where I&#39;ll be"]:
+    for label in ["What I&#39;m reading", "Use Case Spotlight", "Wins &amp; References", "On The Horizon"]:
         assert label in html
     # Vol/No/Date strip uses zero-padded numbers, not "Issue 001".
     assert "No.&nbsp;01" in html
@@ -170,7 +170,7 @@ def test_briefing_email_has_kicker_headline_em_and_sections() -> None:
     assert "What I&#39;m reading" in html
     assert "Use Case Spotlight" in html
     assert "Wins &amp; References" in html
-    assert "Where I&#39;ll be" in html
+    assert "On The Horizon" in html
 
 
 def test_briefing_email_kicker_defaults_to_feature() -> None:
@@ -229,7 +229,7 @@ def test_briefing_email_omits_empty_sections_and_toc_entries() -> None:
     html = build_email_html(issue)
     # Empty sections collapse — their labels never appear.
     assert "Use Case Spotlight" not in html
-    assert "Where I&#39;ll be" not in html
+    assert "On The Horizon" not in html
     assert "What I&#39;m reading" not in html
 
 
@@ -244,6 +244,76 @@ def test_briefing_email_uses_booking_url() -> None:
     assert "https://cal.example.com/neelabh/30" in html
     # Default is "#".
     assert 'href="#"' in build_email_html(_issue())
+
+
+# ---------- Render fixes (paragraphs, spotlight layout, horizon list, CTA) ----------
+
+
+def test_the_read_preserves_paragraph_breaks() -> None:
+    """Blank-line-separated paragraphs in The Read each get their own <p>."""
+    issue = _issue()
+    issue.sections.the_read.content = (
+        "First paragraph leads the issue.\n\n"
+        "Second paragraph develops it.\n\n"
+        "Third paragraph lands the point."
+    )
+    html = build_email_html(issue)
+    # Drop cap floats the first letter of paragraph one; the two later paragraphs
+    # become discrete <p> tags with top margin (visible separation).
+    assert "Second paragraph develops it." in html
+    assert "Third paragraph lands the point." in html
+    assert html.count("margin:16px 0 0;") >= 2  # the two trailing paragraphs
+
+
+def test_spotlight_image_is_full_width_above_body() -> None:
+    """Spotlight stacks image (full column) over body — no narrow 270px column."""
+    issue = _issue()
+    html = build_email_html(
+        issue, spotlight_image=b"\x89PNG\r\n\x1a\nfake", spotlight_image_mime="image/png"
+    )
+    assert "data:image/png;base64," in html
+    assert 'max-width:552px' in html  # full content-column width, not 256px
+    assert 'width="270"' not in html  # old side-by-side column is gone
+
+
+def test_spotlight_body_preserves_paragraphs() -> None:
+    issue = _issue()
+    issue.sections.use_case_spotlight.content = "Para one of the spotlight.\n\nPara two of the spotlight."
+    html = build_email_html(issue)
+    assert "Para one of the spotlight." in html
+    assert "Para two of the spotlight." in html
+
+
+def test_horizon_renders_as_bulleted_list_not_columns() -> None:
+    issue = _issue()
+    html = build_email_html(issue)
+    assert "On The Horizon" in html
+    # No 3-up event columns; items render in a vertical bulleted list.
+    assert 'width="33.33%"' not in html
+    assert "rr-event-cell" not in html
+    for item in ["Board session May 28.", "NRF Big Show January.", "Analytics Unite recap."]:
+        assert item in html
+
+
+def test_cta_copy_defaults_are_field_ae_oriented() -> None:
+    html = build_email_html(_issue())
+    assert "What account is this hitting? Send the name." in html
+    assert "30-min walkthrough of any use case." in html
+    # Old data-scientist-flavoured copy is gone.
+    assert "Tell me where I am wrong." not in html
+    assert "30 minutes, working session." not in html
+
+
+def test_cta_copy_is_configurable() -> None:
+    html = build_email_html(
+        _issue(),
+        reply_cta_heading="Ping ›",
+        reply_cta_body="Custom reply line.",
+        book_cta_heading="Meet ›",
+        book_cta_body="Custom book line.",
+    )
+    assert "Ping ›" in html and "Custom reply line." in html
+    assert "Meet ›" in html and "Custom book line." in html
 
 
 def test_build_slack_text_uses_markdown() -> None:

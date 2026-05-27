@@ -33,6 +33,10 @@ class SettingsResponse(BaseModel):
     voice_check_mode: str
     voice_check_modes: list[str]
     booking_url: str
+    reply_cta_heading: str
+    reply_cta_body: str
+    book_cta_heading: str
+    book_cta_body: str
 
 
 class SettingsUpdate(BaseModel):
@@ -48,6 +52,10 @@ class SettingsUpdate(BaseModel):
     newsletter_generation_model: Optional[str] = None
     voice_check_mode: Optional[str] = None
     booking_url: Optional[str] = None
+    reply_cta_heading: Optional[str] = None
+    reply_cta_body: Optional[str] = None
+    book_cta_heading: Optional[str] = None
+    book_cta_body: Optional[str] = None
 
 
 def _to_response(s: dict) -> SettingsResponse:
@@ -65,6 +73,10 @@ def _to_response(s: dict) -> SettingsResponse:
         voice_check_mode=s["voice_check_mode"],
         voice_check_modes=VOICE_CHECK_MODES,
         booking_url=s.get("booking_url", ""),
+        reply_cta_heading=s.get("reply_cta_heading", ""),
+        reply_cta_body=s.get("reply_cta_body", ""),
+        book_cta_heading=s.get("book_cta_heading", ""),
+        book_cta_body=s.get("book_cta_body", ""),
     )
 
 
@@ -100,6 +112,14 @@ async def update_settings(body: SettingsUpdate) -> SettingsResponse:
         updates["voice_check_mode"] = body.voice_check_mode
     if body.booking_url is not None:
         updates["booking_url"] = body.booking_url
+    if body.reply_cta_heading is not None:
+        updates["reply_cta_heading"] = body.reply_cta_heading
+    if body.reply_cta_body is not None:
+        updates["reply_cta_body"] = body.reply_cta_body
+    if body.book_cta_heading is not None:
+        updates["book_cta_heading"] = body.book_cta_heading
+    if body.book_cta_body is not None:
+        updates["book_cta_body"] = body.book_cta_body
 
     merged = {**current, **updates}
     save_user_settings(merged)

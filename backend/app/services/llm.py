@@ -61,6 +61,10 @@ def get_user_settings() -> dict:
         ),
         "voice_check_mode": user.get("voice_check_mode", env.voice_check_mode),
         "booking_url": user.get("booking_url", env.booking_url),
+        "reply_cta_heading": user.get("reply_cta_heading", env.reply_cta_heading),
+        "reply_cta_body": user.get("reply_cta_body", env.reply_cta_body),
+        "book_cta_heading": user.get("book_cta_heading", env.book_cta_heading),
+        "book_cta_body": user.get("book_cta_body", env.book_cta_body),
     }
 
 

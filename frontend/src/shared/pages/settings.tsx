@@ -20,6 +20,10 @@ interface LlmSettings {
   voice_check_mode: string
   voice_check_modes: string[]
   booking_url: string
+  reply_cta_heading: string
+  reply_cta_body: string
+  book_cta_heading: string
+  book_cta_body: string
 }
 
 const MODEL_LABELS: Record<string, string> = {
@@ -56,6 +60,10 @@ export function Settings() {
   const [newsletterModel, setNewsletterModel] = useState('claude-sonnet-4-6')
   const [voiceCheckMode, setVoiceCheckMode] = useState('manual')
   const [bookingUrl, setBookingUrl] = useState('')
+  const [replyCtaHeading, setReplyCtaHeading] = useState('')
+  const [replyCtaBody, setReplyCtaBody] = useState('')
+  const [bookCtaHeading, setBookCtaHeading] = useState('')
+  const [bookCtaBody, setBookCtaBody] = useState('')
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -68,6 +76,10 @@ export function Settings() {
       setNewsletterModel(data.newsletter_generation_model)
       setVoiceCheckMode(data.voice_check_mode)
       setBookingUrl(data.booking_url ?? '')
+      setReplyCtaHeading(data.reply_cta_heading ?? '')
+      setReplyCtaBody(data.reply_cta_body ?? '')
+      setBookCtaHeading(data.book_cta_heading ?? '')
+      setBookCtaBody(data.book_cta_body ?? '')
     } catch {
       setError('Failed to load settings')
     } finally {
@@ -92,6 +104,10 @@ export function Settings() {
         newsletter_generation_model: newsletterModel,
         voice_check_mode: voiceCheckMode,
         booking_url: bookingUrl,
+        reply_cta_heading: replyCtaHeading,
+        reply_cta_body: replyCtaBody,
+        book_cta_heading: bookCtaHeading,
+        book_cta_body: bookCtaBody,
       }
       if (openaiKey) payload.openai_api_key = openaiKey
       if (anthropicKey) payload.anthropic_api_key = anthropicKey
@@ -268,6 +284,54 @@ export function Settings() {
                   <p className="mt-1.5 text-xs font-body text-slate-500">
                     Links the "Book a meeting" CTA in the newsletter. Leave blank to fall back to a placeholder.
                   </p>
+                </div>
+                <div className="border-t border-border pt-4">
+                  <p className="text-sm font-display font-semibold text-slate-900 mb-1">Newsletter CTA copy</p>
+                  <p className="text-xs font-body text-slate-500 mb-3">
+                    The two action boxes at the foot of each issue. Defaults are written for a field-AE audience. Leave blank to use the default.
+                  </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-body text-slate-600 mb-1.5">Reply — heading</label>
+                      <input
+                        type="text"
+                        value={replyCtaHeading}
+                        onChange={(e) => setReplyCtaHeading(e.target.value)}
+                        placeholder="Reply ›"
+                        className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-body text-slate-600 mb-1.5">Reply — body</label>
+                      <input
+                        type="text"
+                        value={replyCtaBody}
+                        onChange={(e) => setReplyCtaBody(e.target.value)}
+                        placeholder="What account is this hitting? Send the name."
+                        className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-body text-slate-600 mb-1.5">Book — heading</label>
+                      <input
+                        type="text"
+                        value={bookCtaHeading}
+                        onChange={(e) => setBookCtaHeading(e.target.value)}
+                        placeholder="Book ›"
+                        className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-body text-slate-600 mb-1.5">Book — body</label>
+                      <input
+                        type="text"
+                        value={bookCtaBody}
+                        onChange={(e) => setBookCtaBody(e.target.value)}
+                        placeholder="30-min walkthrough of any use case."
+                        className="w-full rounded-lg border border-border bg-surface-0 px-3 py-2 text-sm font-body text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </motion.div>

@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     voice_check_mode: str = "manual"
     # Booking URL for the newsletter "Book a meeting" CTA. Default empty → "#".
     booking_url: str = ""
+    # Newsletter CTA copy (Reply + Book boxes). Field-AE-oriented defaults; editable
+    # in Settings so future issues can adjust without a code change.
+    reply_cta_heading: str = "Reply ›"
+    reply_cta_body: str = "What account is this hitting? Send the name."
+    book_cta_heading: str = "Book ›"
+    book_cta_body: str = "30-min walkthrough of any use case."
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
