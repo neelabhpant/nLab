@@ -74,15 +74,21 @@ def _asset_bytes(filename: str) -> Optional[bytes]:
         return None
 
 
-def _trimmed_logo_uri(filename: str) -> Optional[str]:
-    """Base64 data URI for an orange-on-transparent Cloudera wordmark, trimmed
-    to its content bounding box.
+def _trimmed_logo_uri(filename: str, target_width: int = 200) -> Optional[str]:
+    """Base64 data URI for an orange-on-transparent Cloudera wordmark — trimmed
+    to its content box and downscaled to a small uniform width.
 
-    Trimming removes any transparent padding so a width-constrained render (~100px
-    wide) produces a crisp wordmark with no empty-box artifacts — used for both
-    the masthead (dark strip) and the colophon (cream). Only empty margins are
-    removed; the wordmark pixels and colors are untouched. Falls back to the raw
-    bytes if Pillow is unavailable.
+    Two reasons to downscale to ``target_width`` (2× the ~100px display size, for
+    retina crispness):
+      1. The source wordmarks differ wildly in native size (the masthead PNG
+         trims to ~688px, the colophon PNG is ~5132px). Email clients that drop
+         the ``width`` attribute then render them at those native sizes — the
+         5132px one balloons the whole layout. Capping both at the same small
+         width makes the two placements behave identically and can't blow out.
+      2. Keeps the inlined bytes tiny.
+
+    Trimming removes transparent padding; the wordmark pixels/colors are
+    untouched. Falls back to the raw bytes if Pillow is unavailable.
     """
     data = _asset_bytes(filename)
     if not data:
@@ -94,6 +100,9 @@ def _trimmed_logo_uri(filename: str) -> Optional[str]:
         box = img.getbbox()
         if box:
             img = img.crop(box)
+        if img.width > target_width:
+            new_height = max(1, round(img.height * target_width / img.width))
+            img = img.resize((target_width, new_height), Image.LANCZOS)
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         data = buf.getvalue()

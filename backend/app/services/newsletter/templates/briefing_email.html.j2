@@ -10,11 +10,6 @@
 <meta name="supported-color-schemes" content="light only">
 <title>The Retail Read &middot; Issue {{ issue_no }}</title>
 
-<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;mso-hide:all;">
-  {{ subhead }}
-  &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
-</div>
-
 <!--[if mso]>
 <noscript>
   <xml>
@@ -89,6 +84,14 @@
 
 <body class="rr-page" style="margin:0;padding:0;background:#f6f1e8;color:#15110d;width:100%;font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
 
+<!-- Preheader / inbox preview text. Must be the first body element (not in <head>),
+     hidden from the rendered email. -->
+<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;mso-hide:all;">
+  {{ subhead }}
+  &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;
+</div>
+
+
 <table role="presentation" class="rr-page" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f1e8" style="background:#f6f1e8;">
 <tr><td align="center" style="padding:0;">
 
@@ -111,7 +114,7 @@
           {% if masthead_logo_uri %}
           <!-- Official Cloudera wordmark (orange on transparent → reads on the dark strip), base64-inlined. -->
           <img src="{{ masthead_logo_uri }}" width="100" alt="Cloudera"
-               style="display:inline-block;width:100px;height:auto;border:0;outline:none;">
+               style="display:inline-block;width:100px;max-width:100px;height:auto;border:0;outline:none;">
           {% else %}
           <!-- Fallback: inline text + dot if the asset is unavailable. -->
           <span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#F96302;vertical-align:middle;margin-right:4px;">&nbsp;</span>CLOUDERA
@@ -433,7 +436,7 @@
           <!-- Official Cloudera wordmark (orange on transparent), base64-inlined and
                trimmed to content. The wordmark IS the brand text — no typed label. -->
           <img src="{{ colophon_wordmark_uri }}" width="100" alt="Cloudera"
-               style="display:inline-block;width:100px;height:auto;border:0;outline:none;">
+               style="display:inline-block;width:100px;max-width:100px;height:auto;border:0;outline:none;">
           {% else %}
           <p class="rr-sans" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:600;font-size:14px;line-height:14px;letter-spacing:0.08em;text-transform:uppercase;color:#15110d;margin:0;">CLOUDERA</p>
           {% endif %}

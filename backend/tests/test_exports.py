@@ -26,6 +26,7 @@ from app.services.newsletter.composer import ComposerService
 from app.services.newsletter.exports import (
     _font_face_css,
     _inline_fonts_for_print,
+    _trimmed_logo_uri,
     build_email_html,
     build_pdf,
     build_slack_text,
@@ -406,6 +407,46 @@ def test_briefing_email_logo_falls_back_when_assets_missing(monkeypatch) -> None
     assert "width:11px;height:11px;border-radius:50%" in html
     assert "CLOUDERA" in html
     assert "data:image/png;base64," not in html  # no inlined logos
+
+
+def test_inlined_wordmarks_are_downscaled_and_uniform() -> None:
+    """Both wordmarks inline at a small, near-identical native width.
+
+    The colophon source is ~5132px and the masthead ~688px; left at native size,
+    an email client that drops the width attribute balloons the layout (the Gmail
+    paste bug). Capping both keeps them small and makes the two placements match.
+    """
+    import base64
+    import io
+
+    from PIL import Image
+
+    sizes = {}
+    for fn in ("cloudera-logo.png", "Cloudera_logo_darkorange.png"):
+        uri = _trimmed_logo_uri(fn)
+        assert uri and uri.startswith("data:image/png;base64,")
+        img = Image.open(io.BytesIO(base64.b64decode(uri.split(",", 1)[1])))
+        sizes[fn] = img.width
+        assert img.width <= 200, f"{fn} inlined at {img.width}px (should be capped)"
+    # Masthead and colophon wordmarks render at the same width (no size disparity).
+    assert abs(sizes["cloudera-logo.png"] - sizes["Cloudera_logo_darkorange.png"]) <= 2
+
+
+def test_preheader_is_first_body_element_not_in_head() -> None:
+    """The inbox preview text sits at the top of <body>, not inside <head>.
+
+    A preheader stranded in <head> can be relocated to the visible top of the
+    email by sanitizers (Gmail) — it must be the first body element instead.
+    """
+    issue = _issue()
+    issue.sections.the_read.content = "Uber burned its entire 2026 AI budget by April. The rest follows."
+    html = build_email_html(issue)
+    head = html[: html.find("<body")]
+    body = html[html.find("<body") :]
+    assert "Uber burned its entire" not in head  # preheader not stranded in <head>
+    assert "Uber burned its entire" in body
+    # It appears before the masthead strip.
+    assert body.find("Uber burned its entire") < body.find("TOP DARK STRIP")
 
 
 def test_build_slack_text_uses_markdown() -> None:
