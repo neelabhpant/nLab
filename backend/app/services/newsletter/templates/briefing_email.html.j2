@@ -429,19 +429,17 @@
           <p class="rr-serif" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-style:italic;font-size:13px;font-weight:500;color:#15110d;margin:4px 0 0;">No.&nbsp;{{ issue_no }} &nbsp;&middot;&nbsp; {{ date_str }}</p>
         </td>
         <td class="rr-colo-cell" valign="top" width="30%" align="right" style="width:30%;">
-          <p class="rr-sans" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:600;font-size:14px;line-height:14px;letter-spacing:0.08em;text-transform:uppercase;color:#15110d;margin:0 0 2px;">
-            {% if colophon_icon_uri %}<img src="{{ colophon_icon_uri }}" height="14" alt="" style="display:inline-block;width:auto;height:14px;border:0;outline:none;vertical-align:middle;margin-right:5px;margin-top:-2px;">{% else %}<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F96302;vertical-align:middle;margin-right:4px;">&nbsp;</span>{% endif %}CLOUDERA
-          </p>
-          <p class="rr-mono" style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9px;letter-spacing:0.06em;color:#5a4f43;margin:6px 0 0;line-height:1.4;">
-            Set in Plus<br>Jakarta Sans
-          </p>
+          {% if colophon_wordmark_uri %}
+          <!-- Official Cloudera wordmark (orange on transparent), base64-inlined and
+               trimmed to content. The wordmark IS the brand text — no typed label. -->
+          <img src="{{ colophon_wordmark_uri }}" width="100" alt="Cloudera"
+               style="display:inline-block;width:100px;height:auto;border:0;outline:none;">
+          {% else %}
+          <p class="rr-sans" style="font-family:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:600;font-size:14px;line-height:14px;letter-spacing:0.08em;text-transform:uppercase;color:#15110d;margin:0;">CLOUDERA</p>
+          {% endif %}
         </td>
       </tr>
     </table>
-    <p class="rr-mono" align="center"
-       style="font-family:'JetBrains Mono',Consolas,'Courier New',monospace;font-size:9.5px;letter-spacing:0.1em;text-transform:uppercase;color:#5a4f43;margin:28px 0 0;line-height:1.6;">
-      Unsubscribe &nbsp;&middot;&nbsp; View in browser &nbsp;&middot;&nbsp; Forward
-    </p>
   </td></tr>
 
   <!-- ── BOTTOM PAD ──────────────────────────────────────────────── -->

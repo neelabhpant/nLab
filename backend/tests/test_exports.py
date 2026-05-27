@@ -317,27 +317,29 @@ def test_cta_copy_is_configurable() -> None:
 
 
 def test_briefing_email_inlines_official_cloudera_logos() -> None:
-    """Masthead wordmark + colophon C icon are base64-inlined, not text fallbacks."""
+    """Masthead + colophon both render inlined Cloudera wordmark PNGs."""
     html = build_email_html(_issue())  # no hero/spotlight → only the two logos are PNGs
-    # Masthead now carries the inlined wordmark image, not the text+dot fallback.
-    assert 'alt="Cloudera"' in html
+    # Both placements carry an inlined wordmark image, not a text/dot fallback.
+    assert html.count('alt="Cloudera"') >= 2  # masthead + colophon wordmarks
     assert "width:11px;height:11px;border-radius:50%" not in html  # masthead dot gone
-    # Colophon renders the transparent C icon at 14px alongside the wordmark text.
-    assert 'height="14"' in html
     assert "width:10px;height:10px;border-radius:50%" not in html  # colophon dot gone
-    assert "CLOUDERA" in html
-    assert html.count("data:image/png;base64,") >= 2  # masthead logo + colophon icon
+    assert html.count("data:image/png;base64,") >= 2
+    # Colophon clutter is gone: no typed C icon, no typography credit, no footer row.
+    assert 'height="14"' not in html
+    assert "Set in Plus" not in html
+    assert "Unsubscribe" not in html
 
 
 def test_briefing_email_logo_falls_back_when_assets_missing(monkeypatch) -> None:
-    """If the brand assets can't be read, the inline text+dot wordmark returns."""
+    """If the brand assets can't be read, text fallbacks return (render never breaks)."""
     import app.services.newsletter.exports as ex
 
     monkeypatch.setattr(ex, "_asset_bytes", lambda _name: None)
     html = build_email_html(_issue())
-    # Both fallback dots reappear; no PNG logo data URIs.
+    # Masthead dot+text fallback reappears; colophon falls back to the CLOUDERA wordmark text.
     assert "width:11px;height:11px;border-radius:50%" in html
-    assert "width:10px;height:10px;border-radius:50%" in html
+    assert "CLOUDERA" in html
+    assert "data:image/png;base64," not in html  # no inlined logos
 
 
 def test_build_slack_text_uses_markdown() -> None:

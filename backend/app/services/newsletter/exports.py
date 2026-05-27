@@ -73,16 +73,17 @@ def _asset_bytes(filename: str) -> Optional[bytes]:
         return None
 
 
-def _masthead_logo_uri() -> Optional[str]:
-    """Base64 data URI for the masthead Cloudera wordmark.
+def _trimmed_logo_uri(filename: str) -> Optional[str]:
+    """Base64 data URI for an orange-on-transparent Cloudera wordmark, trimmed
+    to its content bounding box.
 
-    The source PNG (orange wordmark on a fully transparent field) carries a lot
-    of vertical padding, so we trim to the content bounding box — at ~100px wide
-    that turns a 60px-tall mostly-empty box into a crisp ~13px wordmark that fits
-    the thin dark strip. Only empty margins are removed; the wordmark pixels and
-    colors are untouched. Falls back to the raw bytes if Pillow is unavailable.
+    Trimming removes any transparent padding so a width-constrained render (~100px
+    wide) produces a crisp wordmark with no empty-box artifacts — used for both
+    the masthead (dark strip) and the colophon (cream). Only empty margins are
+    removed; the wordmark pixels and colors are untouched. Falls back to the raw
+    bytes if Pillow is unavailable.
     """
-    data = _asset_bytes("cloudera-logo.png")
+    data = _asset_bytes(filename)
     if not data:
         return None
     try:
@@ -557,10 +558,11 @@ def build_email_html(
         "author_title": AUTHOR_TITLE,
         "author_company": AUTHOR_COMPANY,
         "author_contact": AUTHOR_CONTACT,
-        # Official brand logos, base64-inlined (bypass hero auto-compression —
-        # already tiny). Masthead = full wordmark; colophon = transparent "C".
-        "masthead_logo_uri": _masthead_logo_uri(),
-        "colophon_icon_uri": _data_uri(_asset_bytes("cloudera-transparent.png"), "image/png"),
+        # Official brand wordmarks, base64-inlined (bypass hero auto-compression —
+        # already tiny), each trimmed to its content box. Masthead sits on the
+        # dark strip; the colophon wordmark sits on cream.
+        "masthead_logo_uri": _trimmed_logo_uri("cloudera-logo.png"),
+        "colophon_wordmark_uri": _trimmed_logo_uri("Cloudera_logo_darkorange.png"),
     }
 
     template = _jinja_env.get_template("briefing_email.html.j2")
