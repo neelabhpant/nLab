@@ -246,14 +246,14 @@ def headline_with_em(title: str) -> str:
     )
 
 
-# TOC: hardcoded label + page-ref mapping, keyed by section. Only non-empty
-# sections appear (caller filters).
-_TOC_MAP: list[tuple[str, str, str]] = [
-    ("the_read", "The Read", "A1"),
-    ("whats_moving", "What's Moving", "A2"),
-    ("use_case_spotlight", "Use Case Spotlight", "B1"),
-    ("wins", "Wins & References", "B2"),
-    ("horizon", "On The Horizon", "C1"),
+# TOC: ordered section label mapping, keyed by section. Only non-empty sections
+# appear (caller filters). The TOC's leading 01–05 numbers come from render order.
+_TOC_MAP: list[tuple[str, str]] = [
+    ("the_read", "The Read"),
+    ("whats_moving", "What's Moving"),
+    ("use_case_spotlight", "Use Case Spotlight"),
+    ("wins", "Wins & References"),
+    ("horizon", "On The Horizon"),
 ]
 
 
@@ -449,8 +449,8 @@ def build_email_html(
         }
 
     toc = [
-        {"label": label, "ref": ref}
-        for key, label, ref in _TOC_MAP
+        {"label": label}
+        for key, label in _TOC_MAP
         if present.get(key)
     ]
 

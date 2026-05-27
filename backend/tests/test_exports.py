@@ -146,7 +146,7 @@ def test_build_email_html_has_inline_styles_and_sections() -> None:
     assert "style=" in html  # inline CSS on every element
     # Briefing masthead + section labels (the four-moves / editor's note slots are omitted).
     assert "The Retail Read" in html
-    for label in ["What I&#39;m reading", "Use Case Spotlight", "Wins &amp; References", "On The Horizon"]:
+    for label in ["What&#39;s Moving", "Use Case Spotlight", "Wins &amp; References", "On The Horizon"]:
         assert label in html
     # Vol/No/Date strip uses zero-padded numbers, not "Issue 001".
     assert "No.&nbsp;01" in html
@@ -234,10 +234,20 @@ def test_briefing_email_has_kicker_headline_em_and_sections() -> None:
     assert "THE COST WALL" in html  # kicker, uppercased mono
     assert "<em " in html  # headline last-word emphasis
     # All five present sections render their Briefing labels.
-    assert "What I&#39;m reading" in html
+    assert "What&#39;s Moving" in html
     assert "Use Case Spotlight" in html
     assert "Wins &amp; References" in html
     assert "On The Horizon" in html
+
+
+def test_briefing_email_has_no_page_zone_noise() -> None:
+    """No FT/Economist page-zone artifacts: no B-/C-section suffixes, no TOC ref
+    codes, and What's Moving carries a single label (not the duplicate 'reading')."""
+    html = build_email_html(_issue())
+    assert "B-section" not in html and "C-section" not in html  # zone suffixes gone
+    assert "float:right" not in html  # the TOC A1/B1/C1 ref-code column is gone
+    assert "What I&#39;m reading" not in html  # duplicate What's Moving label gone
+    assert "What&#39;s Moving" in html  # the one real label remains
 
 
 def test_briefing_email_kicker_defaults_to_feature() -> None:
@@ -297,7 +307,7 @@ def test_briefing_email_omits_empty_sections_and_toc_entries() -> None:
     # Empty sections collapse — their labels never appear.
     assert "Use Case Spotlight" not in html
     assert "On The Horizon" not in html
-    assert "What I&#39;m reading" not in html
+    assert "What&#39;s Moving" not in html
 
 
 def test_briefing_email_has_no_model_metadata() -> None:
