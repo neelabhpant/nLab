@@ -32,3 +32,7 @@ demo_videos/
 
 # Design handoff: keep the extracted files; the raw zip delivery is a local-only archive
 design/design-b-briefing/_archive/
+
+# Scratch/experiment logo conversions (not part of the project)
+assets/logo/cloudera.gif
+assets/logo/cloudera1.jpeg

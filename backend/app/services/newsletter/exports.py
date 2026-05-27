@@ -560,7 +560,7 @@ def build_email_html(
         # Official brand logos, base64-inlined (bypass hero auto-compression —
         # already tiny). Masthead = full wordmark; colophon = transparent "C".
         "masthead_logo_uri": _masthead_logo_uri(),
-        "colophon_icon_uri": _data_uri(_asset_bytes("cloudera-ient.png"), "image/png"),
+        "colophon_icon_uri": _data_uri(_asset_bytes("cloudera-transparent.png"), "image/png"),
     }
 
     template = _jinja_env.get_template("briefing_email.html.j2")
