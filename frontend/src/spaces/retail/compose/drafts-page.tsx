@@ -58,7 +58,7 @@ export function DraftsPage() {
     <div className="h-full flex flex-col">
       <TopHeader
         title="Drafts"
-        subtitle="Issues in progress"
+        subtitle="Drafts in progress"
         onMenuToggle={onMobileMenuToggle}
       />
 
