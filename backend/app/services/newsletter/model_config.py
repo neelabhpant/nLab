@@ -1,9 +1,9 @@
 """Model selection for Newsletter Composer generation.
 
-Spec §2.2 — generation enforces Claude Opus 4.7. Voice verification uses
-Haiku (cheap and deterministic). If Opus 4.7 is unavailable at request
-time, the LLM client falls back to the user's configured Anthropic model
-and logs the fallback.
+Generation defaults to Sonnet 4.6; voice verification uses Haiku (cheap and
+deterministic). The actual generation model is resolved per request from user
+settings, and the LLM client falls back to the user's configured Anthropic
+model if the requested one is unavailable.
 """
 
 # Default generation model. The actual model is resolved per request from user

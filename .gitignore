@@ -17,9 +17,6 @@ google.txt
 # User data (contains API keys in settings)
 backend/data/
 
-# Project meta
-CLAUDE.md
-
 # Demo videos
 demo_videos/
 
@@ -30,9 +27,21 @@ demo_videos/
 *.swp
 *.swo
 
-# Design handoff: keep the extracted files; the raw zip delivery is a local-only archive
-design/design-b-briefing/_archive/
+# Design handoff source — reference only, not needed to run nLab
+design/
 
-# Scratch/experiment logo conversions (not part of the project)
+# Internal planning / phase notes — not needed to run nLab
+PHASE_*_NOTES.md
+NEWSLETTER_COMPOSER_SPEC.md
+V1.1_BACKLOG.md
+
+# Brand assets: only cloudera-logo.png and Cloudera_logo_darkorange.png are loaded
+# by the PDF renderer; everything else below is scratch/unused.
+assets/logo/Cloudera_logo.svg
+assets/logo/cloudera-icon.png
+assets/logo/cloudera-solid.png
+assets/logo/cloudera-transparent.png
 assets/logo/cloudera.gif
 assets/logo/cloudera1.jpeg
+assets/logo/issue-01-hero-cost-curve.jpeg
+assets/logo/token_cost.jpeg

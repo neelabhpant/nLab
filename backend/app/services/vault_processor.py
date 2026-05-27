@@ -1,4 +1,4 @@
-"""Vault document processing pipeline — text extraction + Claude analysis."""
+"""Vault document processing pipeline — text extraction + LLM analysis."""
 
 import asyncio
 import base64
@@ -120,7 +120,7 @@ def _get_litellm_params(settings: dict) -> dict[str, str]:
     }
 
 
-def _call_claude_analysis(text: str, is_image: bool = False, image_b64: str | None = None) -> dict[str, Any]:
+def _call_llm_analysis(text: str, is_image: bool = False, image_b64: str | None = None) -> dict[str, Any]:
     """Send content to the LLM via litellm for structured analysis."""
     from litellm import completion
 
@@ -200,7 +200,7 @@ class VaultProcessor:
                 image_b64 = await asyncio.to_thread(_file_to_base64, file_path)
 
             analysis = await asyncio.to_thread(
-                _call_claude_analysis, text, is_image, image_b64
+                _call_llm_analysis, text, is_image, image_b64
             )
 
             updates: dict[str, Any] = {
