@@ -1,27 +1,28 @@
 """Export builders for The Retail Read — PDF, email HTML, Slack text.
 
 Three pure functions that turn a SentIssue into a distribution artifact.
-- build_pdf: Cloudera-branded archive PDF (PyMuPDF).
 - build_email_html: single-column inline-CSS HTML for paste-into-Outlook.
+- build_pdf: the same Briefing HTML rendered to PDF by headless Chromium
+  (Playwright) with the brand fonts embedded — visually identical to the HTML.
 - build_slack_text: plain text with Slack markdown.
 
-See NEWSLETTER_COMPOSER_SPEC.md §8. The PDF helpers mirror the proven
-approach in services/retail_newsletter.py but are re-implemented locally
-so this module has no coupling to that file's private helpers.
+See NEWSLETTER_COMPOSER_SPEC.md §8.
 """
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import html as html_lib
 import io
 import re
+import threading
 import urllib.parse
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-import fitz
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.models.newsletter import IssueSections, SentIssue
@@ -247,216 +248,136 @@ _TOC_MAP: list[tuple[str, str, str]] = [
 ]
 
 
-# ================= PDF =================
+# ================= PDF (HTML → PDF via headless Chromium) =================
+#
+# The PDF is the Briefing email HTML rendered by Chromium (Playwright), so it is
+# visually identical to the HTML preview — three-tier masthead, hero image, drop
+# cap, pull quote, full-width spotlight, two-column CTA box, colophon wordmark,
+# cream paper, orange accents and all. The brand fonts are instanced with
+# fonttools and base64-embedded via @font-face, so the output is self-contained
+# and never depends on the Google Fonts CDN. See scripts/build_pdf_fonts.py.
 
-PAGE_W = 595.28
-PAGE_H = 841.89
-MARGIN = 50
-CONTENT_W = PAGE_W - 2 * MARGIN
+_FONT_DIR = Path(__file__).resolve().parent / "fonts"
 
-
-def _rgb(color: tuple[int, int, int]) -> tuple[float, float, float]:
-    return (color[0] / 255, color[1] / 255, color[2] / 255)
-
-
-def _wrap(text: str, font: str, size: float, max_width: float) -> list[str]:
-    lines: list[str] = []
-    for paragraph in text.split("\n"):
-        if not paragraph.strip():
-            lines.append("")
-            continue
-        words = paragraph.split()
-        current = words[0]
-        for word in words[1:]:
-            test = f"{current} {word}"
-            if fitz.get_text_length(test, fontname=font, fontsize=size) > max_width:
-                lines.append(current)
-                current = word
-            else:
-                current = test
-        lines.append(current)
-    return lines
+# (file slug, CSS family, weight, style) — mirrors scripts/build_pdf_fonts.py.
+_PDF_FONTS: list[tuple[str, str, int, str]] = [
+    *[("PlusJakartaSans", "Plus Jakarta Sans", w, "normal") for w in (400, 500, 600, 700, 800)],
+    *[("PlusJakartaSans-Italic", "Plus Jakarta Sans", w, "italic") for w in (400, 500, 600, 700, 800)],
+    *[("JetBrainsMono", "JetBrains Mono", w, "normal") for w in (400, 500, 600)],
+]
 
 
-def build_pdf(issue: SentIssue, spotlight_image: Optional[bytes] = None) -> bytes:
-    """Render a Briefing-styled archive PDF for a sent issue.
+@lru_cache(maxsize=1)
+def _font_face_css() -> str:
+    """@font-face rules embedding the instanced brand fonts as base64 (cached).
 
-    Echoes the HTML Briefing hierarchy: cream paper, brown-black ink, Cloudera
-    orange accents, masthead + kicker + headline + section labels. Helvetica is
-    used (PyMuPDF built-in); Plus Jakarta Sans embedding is deferred — the HTML
-    is the brand-font channel.
+    Returns '' if the font files are missing, in which case the render falls back
+    to the template's Helvetica/Arial stack rather than failing.
     """
-    doc = fitz.open()
-
-    body_font = "helv"
-    bold_font = "hebo"
-    ital_font = "hebi"
-
-    def new_page() -> fitz.Page:
-        p = doc.new_page(width=PAGE_W, height=PAGE_H)
-        # Paint the full cream paper field.
-        p.draw_rect(fitz.Rect(0, 0, PAGE_W, PAGE_H), color=None, fill=_rgb(PAPER))
-        return p
-
-    page = new_page()
-
-    def ensure(y: float, needed: float) -> tuple[fitz.Page, float]:
-        nonlocal page
-        if y + needed > PAGE_H - MARGIN:
-            page = new_page()
-            return page, MARGIN + 6
-        return page, y
-
-    # --- Top dark strip: Vol · No · Date, with the Cloudera dot wordmark. ---
-    strip_h = 30
-    page.draw_rect(fitz.Rect(0, 0, PAGE_W, strip_h), color=None, fill=_rgb(INK))
-    vol = derive_volume(issue.ship_date)
-    date_str = _format_date(issue.ship_date or issue.sent_at)
-    page.insert_text(
-        fitz.Point(MARGIN, 19),
-        f"VOL. {vol:02d}   ·   NO. {issue.issue_number:02d}   ·   {date_str.upper()}",
-        fontname=bold_font,
-        fontsize=8,
-        color=_rgb(PAPER),
-    )
-    page.draw_circle(fitz.Point(PAGE_W - MARGIN - 56, 15), 4, color=None, fill=_rgb(CLOUDERA_ORANGE))
-    page.insert_text(
-        fitz.Point(PAGE_W - MARGIN - 48, 19), "CLOUDERA", fontname=bold_font, fontsize=9, color=_rgb(PAPER)
-    )
-
-    # --- Masthead: tagline / The Retail Read / byline. ---
-    y = strip_h + 34
-    tagline = "A BI-WEEKLY BRIEFING ON AI IN RETAIL"
-    tag_w = fitz.get_text_length(tagline, fontname=bold_font, fontsize=8)
-    page.insert_text(fitz.Point((PAGE_W - tag_w) / 2, y), tagline, fontname=bold_font, fontsize=8, color=_rgb(INK_SOFT))
-    y += 30
-    mast = "The Retail Read"
-    mast_w = fitz.get_text_length(mast, fontname=bold_font, fontsize=34)
-    page.insert_text(fitz.Point((PAGE_W - mast_w) / 2, y), mast, fontname=bold_font, fontsize=34, color=_rgb(INK))
-    page.draw_rect(
-        fitz.Rect((PAGE_W + mast_w) / 2 + 4, y - 10, (PAGE_W + mast_w) / 2 + 11, y - 3),
-        color=None,
-        fill=_rgb(CLOUDERA_ORANGE),
-    )
-    y += 18
-    byline = f"EDITED BY {AUTHOR_NAME.upper()}  ·  {AUTHOR_TITLE.upper()}  ·  {AUTHOR_COMPANY.upper()}"
-    by_w = fitz.get_text_length(byline, fontname=bold_font, fontsize=7)
-    page.insert_text(fitz.Point((PAGE_W - by_w) / 2, y), byline, fontname=bold_font, fontsize=7, color=_rgb(INK_SOFT))
-    y += 18
-
-    # --- Double rule. ---
-    page.draw_rect(fitz.Rect(MARGIN, y, MARGIN + CONTENT_W, y + 3), color=None, fill=_rgb(INK))
-    page.draw_rect(fitz.Rect(MARGIN, y + 6, MARGIN + CONTENT_W, y + 7), color=None, fill=_rgb(INK))
-    y += 26
-
-    # --- Kicker + headline. ---
-    kicker = (issue.kicker or "").strip().upper() or "FEATURE"
-    page.insert_text(fitz.Point(MARGIN, y), kicker, fontname=bold_font, fontsize=8, color=_rgb(CLOUDERA_ORANGE))
-    y += 22
-    for line in _wrap(issue.title or "", bold_font, 24, CONTENT_W):
-        page, y = ensure(y, 28)
-        page.insert_text(fitz.Point(MARGIN, y), line, fontname=bold_font, fontsize=24, color=_rgb(INK))
-        y += 28
-    y += 10
-
-    def section_header(title: str, yy: float) -> float:
-        page, yy = ensure(yy, 30)
-        page.draw_rect(fitz.Rect(MARGIN, yy, MARGIN + CONTENT_W, yy + 2), color=None, fill=_rgb(INK))
-        yy += 16
-        page.insert_text(
-            fitz.Point(MARGIN, yy), title.upper(), fontname=bold_font, fontsize=10, color=_rgb(INK)
-        )
-        return yy + 16
-
-    def prose(text: str, yy: float, size: float = 10.5, leading: float = 15) -> float:
-        for line in _wrap(text, body_font, size, CONTENT_W):
-            page, yy = ensure(yy, leading)
-            if line:
-                page.insert_text(fitz.Point(MARGIN, yy), line, fontname=body_font, fontsize=size, color=_rgb(INK))
-            yy += leading
-        return yy
-
-    def bullet(text: str, yy: float, size: float = 10.5, leading: float = 15) -> float:
-        wrapped = _wrap(text, body_font, size, CONTENT_W - 16)
-        for idx, line in enumerate(wrapped):
-            page, yy = ensure(yy, leading)
-            if idx == 0:
-                page.insert_text(fitz.Point(MARGIN, yy), "•", fontname=body_font, fontsize=size, color=_rgb(CLOUDERA_ORANGE))
-            page.insert_text(fitz.Point(MARGIN + 16, yy), line, fontname=body_font, fontsize=size, color=_rgb(INK))
-            yy += leading
-        return yy + 3
-
-    s = issue.sections
-
-    # 1. The Read
-    y = section_header("The Read", y)
-    y = prose(s.the_read.content or "—", y)
-    y += 14
-
-    # 2. What's Moving
-    y = section_header("What's Moving", y)
-    for line in _whats_moving_lines(s):
-        y = bullet(line, y)
-    y += 11
-
-    # 3. Use Case Spotlight
-    y = section_header("Use Case Spotlight", y)
-    if s.use_case_spotlight.tailored_for_account:
-        page, y = ensure(y, 14)
-        page.insert_text(
-            fitz.Point(MARGIN, y),
-            f"Tailored for {s.use_case_spotlight.tailored_for_account}",
-            fontname=ital_font,
-            fontsize=9,
-            color=_rgb(CLOUDERA_ORANGE),
-        )
-        y += 16
-    y = prose(s.use_case_spotlight.content or "—", y)
-    if spotlight_image:
+    rules: list[str] = []
+    for slug, family, weight, style in _PDF_FONTS:
         try:
-            img_rect = fitz.Rect(MARGIN, y + 6, MARGIN + CONTENT_W, y + 6 + CONTENT_W * 0.5)
-            page, y = ensure(y, img_rect.height + 12)
-            img_rect = fitz.Rect(MARGIN, y + 6, MARGIN + CONTENT_W, y + 6 + CONTENT_W * 0.5)
-            page.insert_image(img_rect, stream=spotlight_image, keep_proportion=True)
-            # 1px ink border, no rounding (Briefing image treatment).
-            page.draw_rect(img_rect, color=_rgb(RULE_FAINT), width=0.8)
-            y = img_rect.y1 + 8
-        except Exception:  # noqa: BLE001 — a bad image must not break the PDF
-            pass
-    y += 14
+            b64 = base64.b64encode((_FONT_DIR / f"{slug}-{weight}.ttf").read_bytes()).decode("ascii")
+        except OSError:
+            continue
+        rules.append(
+            f"@font-face{{font-family:'{family}';font-style:{style};font-weight:{weight};"
+            f"font-display:block;src:url(data:font/ttf;base64,{b64}) format('truetype');}}"
+        )
+    return "".join(rules)
 
-    # 4. Wins & References
-    y = section_header("Wins & References", y)
-    for item in _bullets(s.wins.items):
-        y = bullet(item, y)
-    y += 11
 
-    # 5. On the Horizon
-    y = section_header("On the Horizon", y)
-    for item in _bullets(s.horizon.items):
-        y = bullet(item, y)
-    y += 16
+def _inline_fonts_for_print(html: str) -> str:
+    """Swap the Google Fonts CDN <link> for locally embedded @font-face rules.
 
-    # Footer CTA + colophon.
-    if issue.footer_cta:
-        page, y = ensure(y, 30)
-        page.draw_rect(fitz.Rect(MARGIN, y, MARGIN + CONTENT_W, y + 0.8), color=None, fill=_rgb(RULE_FAINT))
-        y += 16
-        y = prose(issue.footer_cta, y, size=10, leading=14)
-        y += 6
+    Keeps the rendered PDF self-contained and deterministic (no network at render
+    time). If no fonts are embedded, the HTML is returned unchanged.
+    """
+    css = _font_face_css()
+    if not css:
+        return html
+    html = re.sub(r"<link[^>]+fonts\.googleapis\.com/css2[^>]*>", "", html, flags=re.IGNORECASE)
+    return html.replace("</head>", f"<style>{css}</style></head>", 1)
 
-    page, y = ensure(y, 60)
-    page.draw_rect(fitz.Rect(MARGIN, y, MARGIN + CONTENT_W, y + 2), color=None, fill=_rgb(INK))
-    y += 18
-    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_NAME, fontname=bold_font, fontsize=10, color=_rgb(INK))
-    y += 14
-    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_TITLE, fontname=body_font, fontsize=9, color=_rgb(INK_SOFT))
-    y += 12
-    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_COMPANY, fontname=body_font, fontsize=9, color=_rgb(INK_SOFT))
-    y += 12
-    page.insert_text(fitz.Point(MARGIN, y), AUTHOR_CONTACT, fontname=body_font, fontsize=9, color=_rgb(CLOUDERA_ORANGE))
 
-    return doc.tobytes()
+async def _render_pdf_async(html: str) -> bytes:
+    """Render HTML to a single content-sized PDF page with Chromium."""
+    from playwright.async_api import async_playwright
+
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(args=["--no-sandbox"])
+        try:
+            # Render at the email's 600px design width so the layout fills the page
+            # edge-to-edge (no stray cream margins from a wider default viewport).
+            page = await browser.new_page(viewport={"width": 600, "height": 1024})
+            await page.set_content(html, wait_until="load")
+            # Block on embedded @font-face loading so glyphs are present in the snapshot.
+            try:
+                await page.evaluate("document.fonts.ready")
+            except Exception:  # noqa: BLE001 — fonts.ready is best-effort
+                pass
+            # One continuous page sized to the content height — matches the HTML preview
+            # rather than chopping the layout across A4 pages.
+            height = await page.evaluate("() => document.body.scrollHeight")
+            return await page.pdf(
+                width="600px",
+                height=f"{int(height) + 2}px",
+                print_background=True,
+                margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
+            )
+        finally:
+            await browser.close()
+
+
+def render_html_to_pdf(html: str) -> bytes:
+    """Render the Briefing HTML to a self-contained PDF via headless Chromium.
+
+    Runs the async Playwright render in a dedicated thread (with its own event
+    loop) so it is callable from sync code and from inside a running event loop
+    alike. Async callers should wrap this in ``asyncio.to_thread`` to avoid
+    blocking their loop for the duration of the render.
+    """
+    print_html = _inline_fonts_for_print(html)
+    box: dict[str, object] = {}
+
+    def _worker() -> None:
+        try:
+            box["pdf"] = asyncio.run(_render_pdf_async(print_html))
+        except BaseException as exc:  # noqa: BLE001 — surfaced on the calling thread
+            box["err"] = exc
+
+    thread = threading.Thread(target=_worker, name="pdf-render")
+    thread.start()
+    thread.join()
+    if "err" in box:
+        raise box["err"]  # type: ignore[misc]
+    return box["pdf"]  # type: ignore[return-value]
+
+
+def build_pdf(
+    issue: SentIssue,
+    spotlight_image: Optional[bytes] = None,
+    spotlight_image_mime: str = "image/png",
+    hero_image: Optional[bytes] = None,
+    hero_image_mime: str = "image/jpeg",
+    booking_url: str = "#",
+    spotlight_title: Optional[str] = None,
+) -> bytes:
+    """Render the archive PDF: the Briefing email HTML, rendered by Chromium.
+
+    Visually identical to build_email_html's output (same template, same inlined
+    images), with the brand fonts embedded so it never depends on the CDN.
+    """
+    html = build_email_html(
+        issue,
+        spotlight_image=spotlight_image,
+        spotlight_image_mime=spotlight_image_mime,
+        hero_image=hero_image,
+        hero_image_mime=hero_image_mime,
+        booking_url=booking_url,
+        spotlight_title=spotlight_title,
+    )
+    return render_html_to_pdf(html)
 
 
 # ================= Email HTML =================

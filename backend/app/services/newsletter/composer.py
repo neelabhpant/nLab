@@ -8,6 +8,7 @@ This service bundles/unbundles between Pydantic models and that storage shape.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import uuid
@@ -540,9 +541,14 @@ class ComposerService:
         return draft
 
     async def _generate_exports(self, issue: SentIssue) -> tuple[str, str]:
-        """Build the PDF + email HTML, persist them, return their storage paths."""
+        """Build the email HTML + its PDF render, persist them, return their paths.
+
+        The PDF is the same HTML rendered by headless Chromium, so both artifacts
+        are visually identical. The Chromium render runs in a worker thread to
+        keep it off the request event loop.
+        """
         # Imported lazily to keep module import order simple and side-effect free.
-        from app.services.newsletter.exports import build_email_html, build_pdf
+        from app.services.newsletter.exports import build_email_html, render_html_to_pdf
 
         spotlight_image, mime = await self._resolve_spotlight_image(issue.sections)
         hero_image, hero_mime = await self._resolve_hero_image(issue.hero_image_path)
@@ -563,8 +569,9 @@ class ComposerService:
             spotlight_title=spotlight_title,
             **self._cta_copy(),
         )
+        pdf_bytes = await asyncio.to_thread(render_html_to_pdf, html)
         storage = get_storage()
-        await storage.store_file(pdf_rel, build_pdf(issue, spotlight_image))
+        await storage.store_file(pdf_rel, pdf_bytes)
         await storage.store_file(html_rel, html.encode("utf-8"))
         return pdf_rel, html_rel
 

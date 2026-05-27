@@ -43,6 +43,7 @@ fastuuid==0.14.0
 feedparser==6.0.12
 filelock==3.25.2
 flatbuffers==25.12.19
+fonttools==4.63.0
 fredapi==0.5.2
 frozendict==2.4.7
 frozenlist==1.8.0

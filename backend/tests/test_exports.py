@@ -23,9 +23,42 @@ from app.services import storage as storage_module
 from app.services.newsletter import composer as composer_module
 from app.services.newsletter import voice as voice_module
 from app.services.newsletter.composer import ComposerService
-from app.services.newsletter.exports import build_email_html, build_pdf, build_slack_text
+from app.services.newsletter.exports import (
+    _font_face_css,
+    _inline_fonts_for_print,
+    build_email_html,
+    build_pdf,
+    build_slack_text,
+)
 from app.services.newsletter.voice import VoiceService
 from app.services.storage.local import LocalStorageBackend
+
+
+def _chromium_available() -> bool:
+    """True if Playwright can launch headless Chromium (the PDF render path)."""
+    try:
+        from playwright.async_api import async_playwright  # noqa: F401
+    except Exception:
+        return False
+    import asyncio
+
+    async def _probe() -> bool:
+        from playwright.async_api import async_playwright
+
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(args=["--no-sandbox"])
+            await browser.close()
+        return True
+
+    try:
+        return asyncio.run(_probe())
+    except Exception:
+        return False
+
+
+_requires_chromium = pytest.mark.skipif(
+    not _chromium_available(), reason="headless Chromium unavailable for PDF render"
+)
 
 
 def _sections() -> IssueSections:
@@ -67,11 +100,44 @@ def _issue() -> SentIssue:
 # ---------- Pure builders ----------
 
 
+def test_font_face_css_embeds_both_brand_families() -> None:
+    """The PDF @font-face block embeds the instanced Plus Jakarta Sans + JetBrains
+    Mono weights as base64 — no network dependency at render time."""
+    css = _font_face_css()
+    assert css.count("@font-face") == 13  # 5 PJS + 5 PJS italic + 3 JBM
+    assert "'Plus Jakarta Sans'" in css and "'JetBrains Mono'" in css
+    assert "font-style:italic" in css
+    assert "data:font/ttf;base64," in css
+
+
+def test_inline_fonts_swaps_cdn_link_for_local_faces() -> None:
+    """The print transform drops the Google Fonts CDN <link> and injects @font-face."""
+    html = build_email_html(_issue())
+    assert "fonts.googleapis.com/css2" in html  # email keeps the CDN link
+    printed = _inline_fonts_for_print(html)
+    assert "fonts.googleapis.com/css2" not in printed  # PDF render does not
+    assert "@font-face" in printed and "data:font/ttf;base64," in printed
+
+
+@_requires_chromium
 def test_build_pdf_returns_pdf_bytes() -> None:
     data = build_pdf(_issue())
     assert isinstance(data, bytes)
     assert data[:5] == b"%PDF-"
     assert len(data) > 1000
+
+
+@_requires_chromium
+def test_build_pdf_embeds_brand_fonts_not_helvetica() -> None:
+    """The rendered PDF embeds Plus Jakarta Sans + JetBrains Mono, not Helvetica/Times."""
+    import fitz  # PyMuPDF, used only to introspect the output
+
+    data = build_pdf(_issue(), hero_image=b"\x89PNG\r\n\x1a\nfake", hero_image_mime="image/png")
+    doc = fitz.open(stream=data, filetype="pdf")
+    fonts = {f[3] for pno in range(doc.page_count) for f in doc.get_page_fonts(pno)}
+    assert any("JakartaSans" in name for name in fonts), fonts
+    assert any("JetBrainsMono" in name for name in fonts), fonts
+    assert not any(("Helvetica" in n or "Times" in n) for n in fonts), fonts
 
 
 def test_build_email_html_has_inline_styles_and_sections() -> None:
