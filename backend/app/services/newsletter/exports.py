@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import base64
 import html as html_lib
+import io
 import re
 import urllib.parse
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 import fitz
@@ -48,11 +50,54 @@ AUTHOR_CONTACT = "npant@cloudera.com"
 
 # Jinja2 environment for the Briefing email template. Autoescape on for HTML —
 # we use `|safe` deliberately only for the headline (where we inject <em>).
-_TEMPLATE_DIR = __import__("pathlib").Path(__file__).resolve().parent / "templates"
+_TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 _jinja_env = Environment(
     loader=FileSystemLoader(str(_TEMPLATE_DIR)),
     autoescape=select_autoescape(["html", "j2", "html.j2"]),
 )
+
+# Repo-root brand assets (.../nLab/assets/logo). Resolved from this file so it
+# works regardless of the process working directory.
+_ASSET_DIR = Path(__file__).resolve().parents[4] / "assets" / "logo"
+
+
+def _asset_bytes(filename: str) -> Optional[bytes]:
+    """Read a brand asset's raw bytes, or None if it isn't where we expect.
+
+    A missing asset must never break a render — the template falls back to the
+    inline text+dot wordmark when the data URI is None.
+    """
+    try:
+        return (_ASSET_DIR / filename).read_bytes()
+    except OSError:
+        return None
+
+
+def _masthead_logo_uri() -> Optional[str]:
+    """Base64 data URI for the masthead Cloudera wordmark.
+
+    The source PNG (orange wordmark on a fully transparent field) carries a lot
+    of vertical padding, so we trim to the content bounding box — at ~100px wide
+    that turns a 60px-tall mostly-empty box into a crisp ~13px wordmark that fits
+    the thin dark strip. Only empty margins are removed; the wordmark pixels and
+    colors are untouched. Falls back to the raw bytes if Pillow is unavailable.
+    """
+    data = _asset_bytes("cloudera-logo.png")
+    if not data:
+        return None
+    try:
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(data)).convert("RGBA")
+        box = img.getbbox()
+        if box:
+            img = img.crop(box)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        data = buf.getvalue()
+    except Exception:  # noqa: BLE001 — trimming is best-effort; raw bytes still render
+        pass
+    return _data_uri(data, "image/png")
 
 SECTION_TITLES: list[tuple[str, str]] = [
     ("the_read", "The Read"),
@@ -512,6 +557,10 @@ def build_email_html(
         "author_title": AUTHOR_TITLE,
         "author_company": AUTHOR_COMPANY,
         "author_contact": AUTHOR_CONTACT,
+        # Official brand logos, base64-inlined (bypass hero auto-compression —
+        # already tiny). Masthead = full wordmark; colophon = transparent "C".
+        "masthead_logo_uri": _masthead_logo_uri(),
+        "colophon_icon_uri": _data_uri(_asset_bytes("cloudera-ient.png"), "image/png"),
     }
 
     template = _jinja_env.get_template("briefing_email.html.j2")

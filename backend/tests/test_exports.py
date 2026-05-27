@@ -316,6 +316,30 @@ def test_cta_copy_is_configurable() -> None:
     assert "Meet ›" in html and "Custom book line." in html
 
 
+def test_briefing_email_inlines_official_cloudera_logos() -> None:
+    """Masthead wordmark + colophon C icon are base64-inlined, not text fallbacks."""
+    html = build_email_html(_issue())  # no hero/spotlight → only the two logos are PNGs
+    # Masthead now carries the inlined wordmark image, not the text+dot fallback.
+    assert 'alt="Cloudera"' in html
+    assert "width:11px;height:11px;border-radius:50%" not in html  # masthead dot gone
+    # Colophon renders the transparent C icon at 14px alongside the wordmark text.
+    assert 'height="14"' in html
+    assert "width:10px;height:10px;border-radius:50%" not in html  # colophon dot gone
+    assert "CLOUDERA" in html
+    assert html.count("data:image/png;base64,") >= 2  # masthead logo + colophon icon
+
+
+def test_briefing_email_logo_falls_back_when_assets_missing(monkeypatch) -> None:
+    """If the brand assets can't be read, the inline text+dot wordmark returns."""
+    import app.services.newsletter.exports as ex
+
+    monkeypatch.setattr(ex, "_asset_bytes", lambda _name: None)
+    html = build_email_html(_issue())
+    # Both fallback dots reappear; no PNG logo data URIs.
+    assert "width:11px;height:11px;border-radius:50%" in html
+    assert "width:10px;height:10px;border-radius:50%" in html
+
+
 def test_build_slack_text_uses_markdown() -> None:
     text = build_slack_text(_issue())
     assert "*The Retail Read — Issue 001*" in text
