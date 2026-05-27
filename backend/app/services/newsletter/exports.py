@@ -50,12 +50,58 @@ AUTHOR_COMPANY = "Cloudera"
 AUTHOR_CONTACT = "npant@cloudera.com"
 
 # Jinja2 environment for the Briefing email template. Autoescape on for HTML —
-# we use `|safe` deliberately only for the headline (where we inject <em>).
+# we use `|safe` deliberately only for the headline (where we inject <em>) and
+# via the `linkify` filter (which builds its own escaped <a> tags).
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 _jinja_env = Environment(
     loader=FileSystemLoader(str(_TEMPLATE_DIR)),
     autoescape=select_autoescape(["html", "j2", "html.j2"]),
 )
+
+# Inline link styling — matches the colophon email link (orange text + orange
+# underline), inheriting the surrounding body font/size.
+_LINK_STYLE = "color:#F96302;text-decoration:none;border-bottom:1px solid #F96302;"
+# Markdown inline link: [label](url). URL stops at whitespace or the closing paren.
+_MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+# Only these schemes become links; anything else renders as inert escaped text.
+_SAFE_URL = re.compile(r"^(https?:|mailto:)", re.IGNORECASE)
+
+
+def linkify(text: Optional[str]) -> "Markup":
+    """Render markdown-style links ``[label](url)`` in body text as styled <a> tags.
+
+    Everything outside a link is HTML-escaped; inside a link, the label and URL are
+    escaped too, so the only injected markup is the intended anchor. The result is
+    marked safe for the template. Non-http(s)/mailto URLs are dropped to inert text.
+    Generalized for all section body fields — asset references, calendar invites,
+    demo videos, etc.
+    """
+    from markupsafe import Markup, escape
+
+    if not text:
+        return Markup("")
+    parts: list[str] = []
+    cursor = 0
+    for match in _MD_LINK.finditer(str(text)):
+        parts.append(str(escape(text[cursor:match.start()])))
+        label, url = match.group(1), match.group(2)
+        if _SAFE_URL.match(url):
+            parts.append(
+                f'<a href="{escape(url)}" style="{_LINK_STYLE}">{escape(label)}</a>'
+            )
+        else:
+            parts.append(str(escape(match.group(0))))  # not a safe scheme → literal
+        cursor = match.end()
+    parts.append(str(escape(text[cursor:])))
+    return Markup("".join(parts))
+
+
+_jinja_env.filters["linkify"] = linkify
+
+
+def _slack_links(text: str) -> str:
+    """Convert markdown ``[label](url)`` to Slack's ``<url|label>`` link format."""
+    return _MD_LINK.sub(lambda m: f"<{m.group(2)}|{m.group(1)}>", text or "")
 
 # Repo-root brand assets (.../nLab/assets/logo). Resolved from this file so it
 # works regardless of the process working directory.
@@ -511,30 +557,30 @@ def build_slack_text(issue: SentIssue) -> str:
     out.append("")
 
     out.append("*The Read*")
-    out.append(s.the_read.content.strip() or "—")
+    out.append(_slack_links(s.the_read.content.strip()) or "—")
     out.append("")
 
     out.append("*What's Moving*")
     wm = _whats_moving_lines(s)
-    out.extend([f"• {line}" for line in wm] or ["—"])
+    out.extend([f"• {_slack_links(line)}" for line in wm] or ["—"])
     out.append("")
 
     out.append("*Use Case Spotlight*")
     if s.use_case_spotlight.tailored_for_account:
         out.append(f"_Tailored for {s.use_case_spotlight.tailored_for_account}_")
-    out.append(s.use_case_spotlight.content.strip() or "—")
+    out.append(_slack_links(s.use_case_spotlight.content.strip()) or "—")
     out.append("")
 
     out.append("*Wins & References*")
-    out.extend([f"• {i}" for i in _bullets(s.wins.items)] or ["—"])
+    out.extend([f"• {_slack_links(i)}" for i in _bullets(s.wins.items)] or ["—"])
     out.append("")
 
     out.append("*On the Horizon*")
-    out.extend([f"• {i}" for i in _bullets(s.horizon.items)] or ["—"])
+    out.extend([f"• {_slack_links(i)}" for i in _bullets(s.horizon.items)] or ["—"])
     out.append("")
 
     if issue.footer_cta.strip():
-        out.append(issue.footer_cta.strip())
+        out.append(_slack_links(issue.footer_cta.strip()))
         out.append("")
 
     out.append(f"*{AUTHOR_NAME}* · {AUTHOR_TITLE} · {AUTHOR_COMPANY} · {AUTHOR_CONTACT}")

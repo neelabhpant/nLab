@@ -30,6 +30,7 @@ from app.services.newsletter.exports import (
     build_email_html,
     build_pdf,
     build_slack_text,
+    linkify,
 )
 from app.services.newsletter.voice import VoiceService
 from app.services.storage.local import LocalStorageBackend
@@ -457,6 +458,51 @@ def test_preheader_is_first_body_element_not_in_head() -> None:
     assert "Uber burned its entire" in body
     # It appears before the masthead strip.
     assert body.find("Uber burned its entire") < body.find("TOP DARK STRIP")
+
+
+# ---------- Inline hyperlinks in section content ----------
+
+
+def test_linkify_renders_markdown_link_with_brand_style() -> None:
+    out = str(linkify("See the [Highspot](https://example.com/x#1) kit."))
+    assert '<a href="https://example.com/x#1"' in out
+    assert ">Highspot</a>" in out
+    # Brand link styling: orange text + orange underline (matches the colophon link).
+    assert "color:#F96302" in out
+    assert "border-bottom:1px solid #F96302" in out
+    # Surrounding text is preserved (and the link is the only markup).
+    assert out.startswith("See the ") and out.endswith(" kit.")
+
+
+def test_linkify_escapes_text_and_blocks_unsafe_schemes() -> None:
+    # Plain angle brackets are escaped, not treated as tags.
+    assert "&lt;b&gt;" in str(linkify("a <b> c"))
+    # A bracket attribution is not a link and stays literal (escaped).
+    assert "<a " not in str(linkify("Great work [Callen, Hima]"))
+    # Non-http(s)/mailto schemes never become anchors.
+    assert "<a " not in str(linkify("[x](javascript:alert(1))"))
+    assert "" == str(linkify(""))
+
+
+def test_briefing_email_renders_inline_link_in_section_body() -> None:
+    issue = _issue()
+    issue.sections.wins.items = [
+        "Workbook is live on [Highspot](https://cloudera.highspot.com/items/abc#1): pull the kit."
+    ]
+    html = build_email_html(issue)
+    assert '<a href="https://cloudera.highspot.com/items/abc#1"' in html
+    assert "border-bottom:1px solid #F96302" in html
+    assert ">Highspot</a>" in html
+    # The markdown source syntax does not leak into the rendered HTML.
+    assert "[Highspot]" not in html
+
+
+def test_slack_text_converts_markdown_links() -> None:
+    issue = _issue()
+    issue.sections.wins.items = ["Live on [Highspot](https://example.com/x): pull it."]
+    text = build_slack_text(issue)
+    assert "<https://example.com/x|Highspot>" in text
+    assert "[Highspot]" not in text
 
 
 def test_build_slack_text_uses_markdown() -> None:
