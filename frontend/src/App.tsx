@@ -28,6 +28,7 @@ import { Gallery } from '@/spaces/labs/pages/gallery'
 import { Workshop } from '@/spaces/labs/pages/workshop'
 import { OpenClaw } from '@/spaces/labs/pages/openclaw'
 import { FunctionToMusic } from '@/spaces/labs/pages/function-to-music'
+import { DoublePendulum } from '@/spaces/labs/pages/double-pendulum'
 import { ProjectDetail } from '@/spaces/labs/pages/project-detail'
 import { Vault } from '@/shared/pages/vault'
 import { Login } from '@/shared/pages/login'
@@ -111,6 +112,7 @@ function AppRoutes() {
         <Route path="/labs/workshop" element={<Workshop />} />
         <Route path="/labs/openclaw" element={<OpenClaw />} />
         <Route path="/labs/function-to-music" element={<FunctionToMusic />} />
+        <Route path="/labs/double-pendulum" element={<DoublePendulum />} />
         <Route path="/labs/:projectId" element={<ProjectDetail />} />
         <Route path="/vault" element={<Vault />} />
         <Route path="/settings" element={<Settings />} />

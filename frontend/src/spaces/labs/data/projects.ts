@@ -40,4 +40,14 @@ export const PROJECTS: Project[] = [
     accent: '#00D4FF',
     route: '/labs/workshop',
   },
+  {
+    id: 'double-pendulum',
+    name: 'Double Pendulum',
+    description:
+      "Deterministic chaos you can feel. Real Lagrangian physics (RK4-integrated) drives two coupled arms — nudge the start by a hair and watch a swarm of near-identical pendulums fan out into wildly different futures.",
+    tags: ['Physics', 'Chaos', 'Simulation', 'Canvas'],
+    status: 'Active',
+    accent: '#F5A623',
+    route: '/labs/double-pendulum',
+  },
 ]
